@@ -1,0 +1,43 @@
+# voidlink-ddos-botnet-docker-abuse.rules
+# Self-Blocking Docker API Abuse Delivers the VoidLink DDoS-for-Hire Botnet
+# https://github.com/boredchilada/cyfar-detections
+
+# ATTACK Docker create body binds host root filesystem
+alert http any any -> $HOME_NET 2375 (msg:"ATTACK Docker create body binds host root filesystem";  flow:to_server,established;  http.method; content:"POST";  http.uri; content:"/containers/create";  http.request_body; content:"\"Binds\""; content:"\"/:/"; distance:0; within:30;  classtype:attempted-admin; sid:1000231003; rev:2;  metadata:created_at 2026-05-28;)
+
+# ATTACK Docker create body uses chroot for host-namespace escape
+alert http any any -> $HOME_NET 2375 (msg:"ATTACK Docker create body uses chroot for host-namespace escape";  flow:to_server,established;  http.method; content:"POST";  http.uri; content:"/containers/create";  http.request_body; content:"\"chroot\""; content:"\"/host\""; distance:0; within:40;  classtype:attempted-admin; sid:1000231004; rev:2;  metadata:created_at 2026-05-28;)
+
+# ATTACK dockerpwn persistence script delivery in HTTP request body
+alert http any any -> $HOME_NET any (msg:"ATTACK dockerpwn persistence script delivery in HTTP request body";  flow:to_server,established;  http.method; content:"POST";  http.request_body; content:"dockerpwn"; nocase;  classtype:attempted-admin; sid:1000231005; rev:1;  metadata:created_at 2026-05-28;)
+
+# ATTACK Inbound Docker Engine API container create from external source
+alert http $EXTERNAL_NET any -> $HOME_NET 2375 (msg:"ATTACK Inbound Docker Engine API container create from external source";  flow:to_server,established;  http.method; content:"POST";  http.uri; content:"/containers/create";  classtype:attempted-admin; priority:2; sid:1000231001; rev:2;  reference:url,docs.docker.com/engine/api/v1.47/;  metadata:created_at 2026-05-28;)
+
+# ATTACK Inbound Docker Engine API exec/start from external source
+alert http $EXTERNAL_NET any -> $HOME_NET 2375 (msg:"ATTACK Inbound Docker Engine API exec/start from external source";  flow:to_server,established;  http.method; content:"POST";  http.uri; content:"/exec/"; content:"/start"; distance:0;  classtype:attempted-admin; priority:2; sid:1000231002; rev:3;  metadata:created_at 2026-05-28;)
+
+# ATTACK 'Polly for Sonya' Cyrillic-language Docker pwn tooling marker
+alert http any any -> $HOME_NET any (msg:"ATTACK 'Polly for Sonya' Cyrillic-language Docker pwn tooling marker";  flow:to_server,established;  http.method; content:"POST";  http.request_body; content:"by Polly for";  classtype:attempted-admin; sid:1000231006; rev:1;  metadata:created_at 2026-05-28;)
+
+# C2 VoidLink agent binary download (fleet-agent-linux)
+alert http $HOME_NET any -> any 3100 (msg:"C2 VoidLink agent binary download (fleet-agent-linux)";  flow:to_server,established;  http.method; content:"GET";  http.uri; content:"/downloads/fleet-agent-linux-";  classtype:trojan-activity; sid:1000231009; rev:2;  metadata:created_at 2026-06-07;)
+
+# C2 VoidLink agent enrolment (POST /api/agents/enroll)
+alert http $HOME_NET any -> any 3100 (msg:"C2 VoidLink agent enrolment (POST /api/agents/enroll)";  flow:to_server,established;  http.method; content:"POST";  http.uri; content:"/api/agents/enroll";  http.request_body; content:"\"mode\""; content:"\"token\""; distance:0; within:120;  classtype:trojan-activity; sid:1000231007; rev:2;  metadata:created_at 2026-06-07;)
+
+# C2 VoidLink agent WebSocket channel (GET /ws/agent)
+alert http $HOME_NET any -> any 3100 (msg:"C2 VoidLink agent WebSocket channel (GET /ws/agent)";  flow:to_server,established;  http.method; content:"GET";  http.uri; content:"/ws/agent?token=";  http.header; content:"Upgrade"; content:"websocket"; distance:0; within:30;  classtype:trojan-activity; sid:1000231008; rev:2;  metadata:created_at 2026-06-07;)
+
+# C2 VoidLink bootstrap fetch, token-shape key (EXPERIMENTAL)
+alert http $HOME_NET any -> any 3100 (msg:"C2 VoidLink bootstrap fetch, token-shape key (EXPERIMENTAL)";  flow:to_server,established;  http.method; content:"GET";  http.uri; content:"/api/bootstrap-install-script?key="; pcre:"/[?&]key=[A-Za-z0-9_-]{54}(?:&|$)/";  classtype:trojan-activity; sid:1000231013; rev:2;  metadata:created_at 2026-06-08, confidence Medium;)
+
+# C2 VoidLink bootstrap install script fetch
+alert http $HOME_NET any -> any 3100 (msg:"C2 VoidLink bootstrap install script fetch";  flow:to_server,established;  http.method; content:"GET";  http.uri; content:"/api/bootstrap-install-script?key=";  classtype:trojan-activity; sid:1000231010; rev:1;  metadata:created_at 2026-06-07;)
+
+# POLICY Inbound Docker Engine API container create from internal source
+alert http $HOME_NET any -> $HOME_NET 2375 (msg:"POLICY Inbound Docker Engine API container create from internal source";  flow:to_server,established;  http.method; content:"POST";  http.uri; content:"/containers/create";  classtype:policy-violation; priority:4; sid:1000231011; rev:1;  reference:url,docs.docker.com/engine/api/v1.47/;  metadata:created_at 2026-05-28;)
+
+# POLICY Inbound Docker Engine API exec/start from internal source
+alert http $HOME_NET any -> $HOME_NET 2375 (msg:"POLICY Inbound Docker Engine API exec/start from internal source";  flow:to_server,established;  http.method; content:"POST";  http.uri; content:"/exec/"; content:"/start"; distance:0;  classtype:policy-violation; priority:4; sid:1000231012; rev:1;  metadata:created_at 2026-05-28;)
+

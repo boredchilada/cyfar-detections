@@ -1,0 +1,29 @@
+name: "reverse-control-agent C2 DNS lookups and TLS SNI"
+
+# Multi-rule fixture: 4 rules covering the C2 callback and R2 dropper
+# fetch stages. All operate on DNS or TLS (not HTTP body), so they
+# catch the encrypted stages that the inbound Docker API rules cannot.
+
+rule: >-
+  alert dns $HOME_NET any -> any 53 (msg:"MALWARE reverse-control-agent primary C2 DNS lookup (zhangge.okappx.ggff.net)";
+  dns.query; content:"zhangge.okappx.ggff.net"; nocase; endswith;
+  classtype:trojan-activity; sid:1000101010; rev:1;
+  reference:url,pub-f49c78b9eb854878a5ee1d8e3c61aae8.r2.dev;
+  metadata: created_at 2026-05-27;)
+
+  alert dns $HOME_NET any -> any 53 (msg:"MALWARE reverse-control-agent backup C2 DNS lookup (zzz.ifconfig.dpdns.org)";
+  dns.query; content:"zzz.ifconfig.dpdns.org"; nocase; endswith;
+  classtype:trojan-activity; sid:1000101011; rev:1;
+  metadata: created_at 2026-05-27;)
+
+  alert tls $HOME_NET any -> any 443 (msg:"MALWARE reverse-control-agent C2 TLS handshake (zhangge.okappx.ggff.net)";
+  tls.sni; content:"zhangge.okappx.ggff.net"; nocase; endswith;
+  classtype:trojan-activity; sid:1000101012; rev:1;
+  metadata: created_at 2026-05-27;)
+
+  alert tls $HOME_NET any -> any 443 (msg:"MALWARE reverse-control-agent C2 TLS handshake (zzz.ifconfig.dpdns.org)";
+  tls.sni; content:"zzz.ifconfig.dpdns.org"; nocase; endswith;
+  classtype:trojan-activity; sid:1000101013; rev:1;
+  metadata: created_at 2026-05-27;)
+
+tests: []

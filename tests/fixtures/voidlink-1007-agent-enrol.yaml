@@ -1,0 +1,71 @@
+name: "voidlink 1007 — VoidLink agent enrolment (POST /api/agents/enroll)"
+
+rule: >-
+  alert http $HOME_NET any -> any 3100 (msg:"C2 VoidLink agent enrolment (POST /api/agents/enroll)";
+  flow:to_server,established;
+  http.method; content:"POST";
+  http.uri; content:"/api/agents/enroll";
+  http.request_body; content:"\"mode\""; content:"\"token\""; distance:0; within:120;
+  classtype:trojan-activity; sid:1000231007; rev:2;
+  metadata:created_at 2026-06-07;)
+
+tests:
+  - name: "positive-enrol-root"
+    expected_sids: [1000231007]
+    request:
+      method: POST
+      uri: /api/agents/enroll
+      host: 213.108.21.95
+      port: 3100
+      headers:
+        Content-Type: application/json
+        User-Agent: curl/7.68.0
+      body: >-
+        {"hostname":"cad7684ed61f","mode":"root","services":[],"tags":[],"token":"TRTySbI_5DSHStH74OPZLEl1xJl_VO1ltxv231eplMuYl2hQemgerQ"}
+
+  - name: "positive-enrol-nonroot"
+    expected_sids: [1000231007]
+    request:
+      method: POST
+      uri: /api/agents/enroll
+      host: 213.108.21.95
+      port: 3100
+      headers:
+        Content-Type: application/json
+        User-Agent: curl/7.68.0
+      body: >-
+        {"hostname":"victim-02","mode":"non-root","services":[],"tags":[],"token":"abc123"}
+
+  - name: "negative-missing-mode-field"
+    expected_sids: []
+    request:
+      method: POST
+      uri: /api/agents/enroll
+      host: 213.108.21.95
+      port: 3100
+      headers:
+        Content-Type: application/json
+      body: >-
+        {"hostname":"legit-agent","token":"abc123"}
+
+  - name: "negative-wrong-port"
+    expected_sids: []
+    request:
+      method: POST
+      uri: /api/agents/enroll
+      host: 10.0.0.50
+      port: 8080
+      headers:
+        Content-Type: application/json
+      body: >-
+        {"hostname":"legit","mode":"root","services":[],"tags":[],"token":"abc"}
+
+  - name: "negative-get-not-post"
+    expected_sids: []
+    request:
+      method: GET
+      uri: /api/agents/enroll
+      host: 213.108.21.95
+      port: 3100
+      headers:
+        User-Agent: curl/7.68.0

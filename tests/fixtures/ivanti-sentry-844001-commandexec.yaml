@@ -1,0 +1,61 @@
+name: "Ivanti Sentry 844001 — pre-auth MICS handleMessage POST (CVE-2026-10520, high)"
+
+rule: >-
+  alert http $EXTERNAL_NET any -> $HOME_NET 8443 (msg:"IVANTI SENTRY CVE-2026-10520 MICS handleMessage POST (pre-auth RCE attempt)";
+  flow:to_server,established;
+  http.method; content:"POST";
+  http.uri; content:"/mics/"; content:"/handleMessage"; fast_pattern;
+  reference:cve,2026-10520; reference:url,nvd.nist.gov/vuln/detail/CVE-2026-10520;
+  classtype:attempted-admin; priority:1; sid:1000844001; rev:1;)
+
+tests:
+  - name: "positive-handlemessage-external-post"
+    expected_sids: [1000844001]
+    request:
+      client_ip: 203.0.113.5
+      method: POST
+      uri: /mics/api/v2/sentry/mics-config/handleMessage
+      host: 198.51.100.10
+      port: 8443
+      headers:
+        Content-Type: application/xml
+        User-Agent: python-requests/2.31.0
+      body: >-
+        <message><command>id</command></message>
+
+  - name: "negative-get-not-post"
+    expected_sids: []
+    request:
+      client_ip: 203.0.113.5
+      method: GET
+      uri: /mics/api/v2/sentry/mics-config/handleMessage
+      host: 198.51.100.10
+      port: 8443
+      headers:
+        User-Agent: python-requests/2.31.0
+
+  - name: "negative-different-mics-path"
+    expected_sids: []
+    request:
+      client_ip: 203.0.113.5
+      method: POST
+      uri: /mics/login.jsp
+      host: 198.51.100.10
+      port: 8443
+      headers:
+        Content-Type: application/x-www-form-urlencoded
+      body: >-
+        username=admin&password=admin
+
+  - name: "negative-internal-source"
+    expected_sids: []
+    request:
+      client_ip: 10.200.1.50
+      method: POST
+      uri: /mics/api/v2/sentry/mics-config/handleMessage
+      host: 198.51.100.10
+      port: 8443
+      headers:
+        Content-Type: application/xml
+      body: >-
+        <message><command>id</command></message>

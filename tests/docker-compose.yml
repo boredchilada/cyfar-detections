@@ -1,0 +1,6 @@
+services:
+  validator:
+    build: .
+    volumes:
+      - ./fixtures:/validator/fixtures:ro
+      - ./output:/validator/output
