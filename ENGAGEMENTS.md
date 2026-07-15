@@ -9,5 +9,3 @@ Which rules came from which published engagement.
 | [Cross-Service Credential Replay](https://cyfar.ca/engagements/cross-service-credential-replay-operator-targets-hypervisor-using-harvested-llm) | 1 | 0 | 0 | 1 |
 
 Rules are added to this repo when their engagement report publishes on cyfar.ca. Unpublished research stays private.
-
-**Note:** The credential replay engagement's Suricata rule (SID 1000508001) is published in the report's Detection Opportunities section but was not indexed by the `/api/detections` endpoint. This is a known extraction gap on cyfar.ca.
