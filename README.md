@@ -36,7 +36,7 @@ tests/
 | File | Type | Rules |
 |------|------|-------|
 | `suricata/voidlink-ddos-botnet-docker-abuse.rules` | Suricata | 13 (Docker API abuse, host escape, C2 enrollment, binary download, bootstrap fetch) |
-| `yara/voidlink-ddos-botnet-docker-abuse.yar` | YARA | 2 (DockerPwn persistence script, VoidLink fleet agent) |
+| `yara/voidlink-ddos-botnet-docker-abuse.yar` | YARA | 4 (DockerPwn persistence script, VoidLink fleet agent, bootstrap dropper, libhide rootkit) |
 | `host/voidlink-ddos-botnet-docker-abuse.sh` | Host | 8 (SSH markers, systemd overrides, rootkit hooks, on-disk artifacts) |
 
 ### Cross-service credential replay
@@ -47,7 +47,7 @@ tests/
 |------|------|-------|
 | `suricata/cross-service-credential-replay.rules` | Suricata | 1 (prompt injection env-var exfil) |
 
-**Totals:** 15 Suricata rules, 4 YARA rules, 9 host hunt commands. More rules land as new engagement reports publish.
+**Totals:** 15 Suricata rules, 6 YARA rules, 9 host hunt commands. More rules land as new engagement reports publish.
 
 ## Using the rules
 
