@@ -52,7 +52,7 @@ def craft_pcap(request_spec, output_path, client_port=49152):
     so the HTTP parser fully commits the transaction.
     """
     client_ip = request_spec.get("client_ip", "10.0.0.1")
-    server_ip = "10.0.0.2"
+    server_ip = request_spec.get("server_ip", "10.0.0.2")
     server_port = request_spec.get("port", 80)
     client_seq = 1000
     server_seq = 2000

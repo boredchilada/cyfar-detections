@@ -1,0 +1,81 @@
+name: "n4d 1000637002 — Agent download from Mesh Control C2 IP"
+
+rule: >-
+  alert http $HOME_NET any -> 209.99.186.235 any (msg:"N4D Worm - Agent download from Mesh Control C2";
+  flow:to_server,established;
+  http.uri; content:"/api/agent/";
+  classtype:trojan-activity; sid:1000637002; rev:2;
+  metadata:created_at 2026_07_10, deployment Egress;)
+
+tests:
+  - name: "positive-agent-full-download"
+    expected_sids: [1000637002]
+    request:
+      method: GET
+      uri: /api/agent/full?arch=amd64
+      host: "209.99.186.235"
+      port: 80
+      client_ip: "10.0.0.50"
+      server_ip: "209.99.186.235"
+      headers:
+        User-Agent: curl/8.18.0
+
+  - name: "positive-agent-loader-download"
+    expected_sids: [1000637002]
+    request:
+      method: GET
+      uri: /api/agent/loader?k=n4d-2ff16c75b1d2
+      host: "209.99.186.235"
+      port: 80
+      client_ip: "10.0.0.50"
+      server_ip: "209.99.186.235"
+      headers:
+        User-Agent: wget
+
+  - name: "positive-agent-binary-alt-path"
+    expected_sids: [1000637002]
+    request:
+      method: GET
+      uri: /api/agent/binary?arch=arm64
+      host: "209.99.186.235"
+      port: 80
+      client_ip: "10.0.0.50"
+      server_ip: "209.99.186.235"
+      headers:
+        User-Agent: curl/8.18.0
+
+  - name: "negative-wrong-destination-ip"
+    expected_sids: []
+    request:
+      method: GET
+      uri: /api/agent/full?arch=amd64
+      host: "1.2.3.4"
+      port: 80
+      client_ip: "10.0.0.50"
+      server_ip: "1.2.3.4"
+      headers:
+        User-Agent: curl/8.18.0
+
+  - name: "negative-c2-ip-different-path"
+    expected_sids: []
+    request:
+      method: GET
+      uri: /panel/login
+      host: "209.99.186.235"
+      port: 80
+      client_ip: "10.0.0.50"
+      server_ip: "209.99.186.235"
+      headers:
+        User-Agent: Mozilla/5.0
+
+  - name: "negative-c2-ip-root"
+    expected_sids: []
+    request:
+      method: GET
+      uri: /
+      host: "209.99.186.235"
+      port: 80
+      client_ip: "10.0.0.50"
+      server_ip: "209.99.186.235"
+      headers:
+        User-Agent: curl/8.18.0

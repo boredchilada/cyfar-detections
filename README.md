@@ -47,7 +47,19 @@ tests/
 |------|------|-------|
 | `suricata/cross-service-credential-replay.rules` | Suricata | 1 (prompt injection env-var exfil) |
 
-**Totals:** 15 Suricata rules, 6 YARA rules, 9 host hunt commands. More rules land as new engagement reports publish.
+### n4d/NadMesh MCP propagation worm
+
+[n4d/NadMesh: C2-Coordinated Propagation System Weaponizes MCP](https://cyfar.ca/engagements/n4dnadmesh-c2-coordinated-propagation-system-weaponizes-mcp)
+
+| File | Type | Rules |
+|------|------|-------|
+| `suricata/n4d-mcp-worm.rules` | Suricata | 3 (external MCP initialize, C2 + cdnorigin agent download) |
+| `yara/n4d-mcp-worm.yar` | YARA | 5 (unpacked agent, watchdog, updater, login hook, SSH key) |
+| `host/n4d-mcp-worm.sh` | Host | 4 (node-ID + binary self-copies, login hook, SSH key, cron updater) |
+
+The packed agent (UPX + garble) has no dedicated rule: on disk it is indistinguishable from any other UPX-packed Go binary. Detect packing generically, unpack with `upx -d`, then apply `n4d_agent_unpacked`.
+
+**Totals:** 18 Suricata rules, 11 YARA rules, 13 host hunt commands. More rules land as new engagement reports publish.
 
 ## Using the rules
 

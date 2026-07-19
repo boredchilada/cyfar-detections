@@ -1,0 +1,76 @@
+name: "n4d 1000637003 — Agent download from cdnorigin.net"
+
+rule: >-
+  alert http $HOME_NET any -> any any (msg:"N4D Worm - Agent download from cdnorigin.net";
+  flow:to_server,established;
+  http.host; content:"cdnorigin.net";
+  http.uri; content:"/api/agent/";
+  classtype:trojan-activity; sid:1000637003; rev:2;
+  metadata:created_at 2026_07_10, deployment Egress;)
+
+tests:
+  - name: "positive-updater-primary"
+    expected_sids: [1000637003]
+    request:
+      method: GET
+      uri: /api/agent/binary?arch=amd64
+      host: cdnorigin.net
+      port: 80
+      client_ip: "10.0.0.50"
+      headers:
+        User-Agent: wget
+
+  - name: "positive-loader-with-key"
+    expected_sids: [1000637003]
+    request:
+      method: GET
+      uri: /api/agent/loader?k=n4d-2ff16c75b1d2
+      host: cdnorigin.net
+      port: 80
+      client_ip: "10.0.0.50"
+      headers:
+        User-Agent: curl/8.18.0
+
+  - name: "positive-full-agent"
+    expected_sids: [1000637003]
+    request:
+      method: GET
+      uri: /api/agent/full?arch=arm64
+      host: cdnorigin.net
+      port: 443
+      client_ip: "10.0.0.50"
+      headers:
+        User-Agent: wget
+
+  - name: "negative-wrong-host"
+    expected_sids: []
+    request:
+      method: GET
+      uri: /api/agent/full?arch=amd64
+      host: cdn.example.com
+      port: 80
+      client_ip: "10.0.0.50"
+      headers:
+        User-Agent: wget
+
+  - name: "negative-cdnorigin-different-path"
+    expected_sids: []
+    request:
+      method: GET
+      uri: /health
+      host: cdnorigin.net
+      port: 80
+      client_ip: "10.0.0.50"
+      headers:
+        User-Agent: curl/8.18.0
+
+  - name: "negative-cdnorigin-root"
+    expected_sids: []
+    request:
+      method: GET
+      uri: /
+      host: cdnorigin.net
+      port: 80
+      client_ip: "10.0.0.50"
+      headers:
+        User-Agent: Mozilla/5.0
