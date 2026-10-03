@@ -61,7 +61,7 @@ The packed agent (UPX + garble) has no dedicated rule: on disk it is indistingui
 
 ### Citrix NetScaler CVE-2026-88771
 
-[The Pitboss Pipeline: NetScaler Exploit Requests Split Across Headers and Logs](https://cyfar.ca/engagements/the-pitboss-pipeline-netscaler-exploit-requests-split-across-headers-and-logs)
+[The Pitboss Pipeline: NetScaler Log Poisoning and a FreeBSD Sliver Implant](https://cyfar.ca/engagements/the-pitboss-pipeline-netscaler-log-poisoning-and-a-freebsd-sliver-implant)
 
 | File | Type | Rules |
 |------|------|-------|
