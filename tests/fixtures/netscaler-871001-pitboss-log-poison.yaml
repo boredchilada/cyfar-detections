@@ -1,0 +1,119 @@
+name: "NetScaler 871001 — Pre-Auth Pitboss Log Poisoning Exploit (CVE-2026-88771, critical)"
+
+rule: >-
+  alert http $EXTERNAL_NET any -> $HOME_NET any (msg:"CITRIX NETSCALER Pre-Auth Pitboss Log Poisoning Exploit Attempt (CVE-2026-88771)";
+  flow:to_server,established;
+  http.method; content:"POST";
+  http.request_body; content:"pitboss"; nocase;
+  content:"PPE"; distance:0; nocase;
+  content:"NSPPE"; distance:0; nocase;
+  pcre:"/(unexpectedly(?:\s+|\+|%0[9ad]|%20)died|missed(?:\s+|\+|%0[9ad]|%20)too(?:\s+|\+|%0[9ad]|%20)many(?:\s+|\+|%0[9ad]|%20)heartbeats).*?NSPPE(?:[\x3b\x7c\x60\x24\x0a\x0d]|%3b|%0[ad]|%26|%7c|%60|%24)/iP";
+  reference:cve,2026-88771;
+  reference:url,labs.watchtowr.com/oh-look-the-foot-gun-went-off-again-citrix-netscaler-preauth-command-injection-cve-2026-88771/;
+  classtype:attempted-admin; priority:1; sid:1000871001; rev:3;)
+
+tests:
+  - name: "positive-captured-auth-died-trigger"
+    expected_sids: [1000871001]
+    request:
+      client_ip: 203.0.113.15
+      method: POST
+      uri: /nf/auth/doAuthentication.do
+      port: 80
+      headers:
+        Content-Type: application/x-www-form-urlencoded
+        User-Agent: Mozilla/5.0
+      body: >-
+        login=pitboss+PPE+unexpectedly+died+NSPPE%3Bid%3E%2Fvar%2Ftmp%2FwatchTowr%3B%23+X&passwd=x&savecredentials=false&nsg-x1-logon-button=Log+On
+
+  - name: "positive-observed-heartbeats-grammar"
+    expected_sids: [1000871001]
+    request:
+      client_ip: 203.0.113.15
+      method: POST
+      uri: /cgi/login
+      port: 80
+      headers:
+        Content-Type: application/x-www-form-urlencoded
+        User-Agent: Python-urllib/3.11
+      body: >-
+        login=pitboss%20PPE%20missed%20too%20many%20heartbeatsNSPPE;id;%20X&passwd=x
+
+  - name: "negative-normal-netscaler-login"
+    expected_sids: []
+    request:
+      client_ip: 203.0.113.15
+      method: POST
+      uri: /nf/auth/doAuthentication.do
+      port: 80
+      headers:
+        Content-Type: application/x-www-form-urlencoded
+        User-Agent: Mozilla/5.0
+      body: >-
+        login=admin&passwd=ComplexPassword123!&savecredentials=false
+
+  - name: "negative-benign-pitboss-diagnostic-mention"
+    expected_sids: []
+    request:
+      client_ip: 203.0.113.15
+      method: POST
+      uri: /api/v1/diagnostics/submit
+      port: 80
+      headers:
+        Content-Type: application/json
+      body: >-
+        {"log": "pitboss service status normal, no PPE crash detected"}
+
+  - name: "negative-get-request"
+    expected_sids: []
+    request:
+      client_ip: 203.0.113.15
+      method: GET
+      uri: /nf/auth/doAuthentication.do?login=pitboss+PPE+unexpectedly+died+NSPPE;id;#
+      port: 80
+      headers:
+        User-Agent: Mozilla/5.0
+
+  - name: "positive-captured-encoded-newline-separator"
+    expected_sids: [1000871001]
+    request:
+      client_ip: 203.0.113.15
+      method: POST
+      uri: /nf/auth/doAuthentication.do
+      port: 80
+      headers:
+        Content-Type: application/x-www-form-urlencoded
+      body: "login=pitboss%20PPE%20unexpectedly%20died%20NSPPE%0Aid%3E%2Fvar%2Ftmp%2Fmarker%0A%23%20X&passwd=x"
+
+  - name: "positive-encoded-tab-word-separators"
+    expected_sids: [1000871001]
+    request:
+      client_ip: 203.0.113.15
+      method: POST
+      uri: /nf/auth/doAuthentication.do
+      port: 80
+      headers:
+        Content-Type: application/x-www-form-urlencoded
+      body: "login=pitboss%09PPE%09unexpectedly%09died%09NSPPE%3Bid%3B%23%20X&passwd=x"
+
+  - name: "negative-percent-encoded-space-after-nsppe"
+    expected_sids: []
+    request:
+      client_ip: 203.0.113.15
+      method: POST
+      uri: /api/v1/diagnostics/submit
+      port: 80
+      headers:
+        Content-Type: application/x-www-form-urlencoded
+      body: "message=pitboss%20PPE%20unexpectedly%20died%20NSPPE%20status-normal"
+
+  - name: "negative-form-field-ampersand-after-nsppe"
+    expected_sids: []
+    request:
+      client_ip: 203.0.113.15
+      method: POST
+      uri: /api/v1/diagnostics/submit
+      port: 80
+      headers:
+        Content-Type: application/x-www-form-urlencoded
+      body: "message=pitboss+PPE+unexpectedly+died+NSPPE&status=normal"

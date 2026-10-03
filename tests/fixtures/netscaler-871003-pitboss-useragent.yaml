@@ -1,0 +1,62 @@
+name: "NetScaler 871003 - Pre-Auth Pitboss Log Poisoning in User-Agent (CVE-2026-88771, critical)"
+
+rule: >-
+  alert http $EXTERNAL_NET any -> $HOME_NET any (msg:"CITRIX NETSCALER Pre-Auth Pitboss Log Poisoning in User-Agent (CVE-2026-88771)";
+  flow:to_server,established;
+  http.user_agent; content:"pitboss"; nocase;
+  content:"PPE"; distance:0; nocase;
+  content:"NSPPE"; distance:0; nocase;
+  pcre:"/(unexpectedly(?:\s+|\+|%0[9ad]|%20)died|missed(?:\s+|\+|%0[9ad]|%20)too(?:\s+|\+|%0[9ad]|%20)many(?:\s+|\+|%0[9ad]|%20)heartbeats).*?NSPPE(?:[\x3b\x26\x7c\x60\x24]|%3b|%26|%7c|%60|%24)/i";
+  reference:cve,2026-88771;
+  classtype:attempted-admin; priority:1; sid:1000871003; rev:2;)
+
+tests:
+  - name: "positive-captured-pattern-in-user-agent"
+    expected_sids: [1000871003]
+    request:
+      client_ip: 203.0.113.15
+      method: GET
+      uri: /
+      port: 80
+      headers:
+        User-Agent: "pitboss PPE unexpectedly died NSPPE;cp /nsconfig/ns.conf /tmp/c88771.txt;# X"
+
+  - name: "negative-standard-browser-user-agent"
+    expected_sids: []
+    request:
+      client_ip: 203.0.113.15
+      method: GET
+      uri: /
+      port: 80
+      headers:
+        User-Agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+
+  - name: "negative-benign-pitboss-diagnostic-user-agent"
+    expected_sids: []
+    request:
+      client_ip: 203.0.113.15
+      method: GET
+      uri: /diagnostics
+      port: 80
+      headers:
+        User-Agent: "pitboss PPE health diagnostic NSPPE status-normal"
+
+  - name: "positive-command-substitution-in-user-agent"
+    expected_sids: [1000871003]
+    request:
+      client_ip: 203.0.113.15
+      method: GET
+      uri: /
+      port: 80
+      headers:
+        User-Agent: 'pitboss PPE unexpectedly died NSPPE$(id>/tmp/marker)'
+
+  - name: "positive-alternate-heartbeats-user-agent"
+    expected_sids: [1000871003]
+    request:
+      client_ip: 203.0.113.15
+      method: GET
+      uri: /
+      port: 80
+      headers:
+        User-Agent: "pitboss PPE missed too many heartbeats NSPPE;id;# X"

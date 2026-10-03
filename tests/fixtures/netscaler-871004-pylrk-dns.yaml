@@ -1,0 +1,58 @@
+name: "NetScaler 871004 - pylrk.cc DNS lookup from the appliance network (CVE-2026-88771, high)"
+
+# DNS over TCP/53 is used because the crafter builds TCP conversations. The rule
+# is protocol-level (alert dns) and matches UDP lookups the same way.
+rule: >-
+  alert dns $HOME_NET any -> any any (msg:"CITRIX NETSCALER Delivery and C2 Domain pylrk.cc DNS Lookup (CVE-2026-88771)";
+  dns.query; dotprefix; content:".pylrk.cc"; nocase; endswith;
+  reference:cve,2026-88771;
+  classtype:trojan-activity; priority:2; sid:1000871004; rev:1;)
+
+tests:
+  - name: "positive-delivery-host-f"
+    expected_sids: [1000871004]
+    request:
+      client_ip: 10.0.0.1
+      server_ip: 203.0.113.53
+      port: 53
+      raw_hex: "001c12340100000100000000000001660570796c726b0263630000010001"
+
+  - name: "positive-c2-host-www"
+    expected_sids: [1000871004]
+    request:
+      client_ip: 10.0.0.1
+      server_ip: 203.0.113.53
+      port: 53
+      raw_hex: "001e123401000001000000000000037777770570796c726b0263630000010001"
+
+  - name: "positive-apex-domain"
+    expected_sids: [1000871004]
+    request:
+      client_ip: 10.0.0.1
+      server_ip: 203.0.113.53
+      port: 53
+      raw_hex: "001a1234010000010000000000000570796c726b0263630000010001"
+
+  - name: "negative-lookalike-suffix-notpylrk"
+    expected_sids: []
+    request:
+      client_ip: 10.0.0.1
+      server_ip: 203.0.113.53
+      port: 53
+      raw_hex: "001d123401000001000000000000086e6f7470796c726b0263630000010001"
+
+  - name: "negative-pylrk-as-subdomain-of-another-zone"
+    expected_sids: []
+    request:
+      client_ip: 10.0.0.1
+      server_ip: 203.0.113.53
+      port: 53
+      raw_hex: "00261234010000010000000000000570796c726b026363076578616d706c6503636f6d0000010001"
+
+  - name: "negative-unrelated-domain"
+    expected_sids: []
+    request:
+      client_ip: 10.0.0.1
+      server_ip: 203.0.113.53
+      port: 53
+      raw_hex: "001d123401000001000000000000076578616d706c6503636f6d0000010001"

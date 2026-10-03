@@ -1,0 +1,57 @@
+name: "NetScaler 871005 - pylrk.cc TLS SNI from the appliance network (CVE-2026-88771, high)"
+
+rule: >-
+  alert tls $HOME_NET any -> $EXTERNAL_NET any (msg:"CITRIX NETSCALER Delivery and C2 Domain pylrk.cc TLS SNI (CVE-2026-88771)";
+  flow:to_server,established;
+  tls.sni; dotprefix; content:".pylrk.cc"; nocase; endswith;
+  reference:cve,2026-88771;
+  classtype:trojan-activity; priority:2; sid:1000871005; rev:1;)
+
+tests:
+  - name: "positive-c2-host-www"
+    expected_sids: [1000871005]
+    request:
+      client_ip: 10.0.0.1
+      server_ip: 203.0.113.80
+      port: 443
+      raw_hex: "16030100440100004003030102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2000000213010100001500000011000f00000c7777772e70796c726b2e6363"
+
+  - name: "positive-delivery-host-f"
+    expected_sids: [1000871005]
+    request:
+      client_ip: 10.0.0.1
+      server_ip: 203.0.113.80
+      port: 443
+      raw_hex: "16030100420100003e03030102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f200000021301010000130000000f000d00000a662e70796c726b2e6363"
+
+  - name: "positive-apex-domain"
+    expected_sids: [1000871005]
+    request:
+      client_ip: 10.0.0.1
+      server_ip: 203.0.113.80
+      port: 443
+      raw_hex: "16030100400100003c03030102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f200000021301010000110000000d000b00000870796c726b2e6363"
+
+  - name: "negative-lookalike-suffix-notpylrk"
+    expected_sids: []
+    request:
+      client_ip: 10.0.0.1
+      server_ip: 203.0.113.80
+      port: 443
+      raw_hex: "16030100430100003f03030102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2000000213010100001400000010000e00000b6e6f7470796c726b2e6363"
+
+  - name: "negative-pylrk-as-subdomain-of-another-zone"
+    expected_sids: []
+    request:
+      client_ip: 10.0.0.1
+      server_ip: 203.0.113.80
+      port: 443
+      raw_hex: "160301004c0100004803030102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2000000213010100001d00000019001700001470796c726b2e63632e6578616d706c652e636f6d"
+
+  - name: "negative-unrelated-domain"
+    expected_sids: []
+    request:
+      client_ip: 10.0.0.1
+      server_ip: 203.0.113.80
+      port: 443
+      raw_hex: "16030100430100003f03030102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2000000213010100001400000010000e00000b6578616d706c652e636f6d"

@@ -20,9 +20,10 @@ import yaml
 
 from craft_pcap import craft_pcap
 
-# Minimal suricata.yaml that enables the HTTP app-layer parser.
-# Without this, content matches against http_method / http_uri /
-# http_client_body will never fire.
+# Minimal Suricata configuration for HTTP, cleartext FTP, DNS and TLS fixtures.
+# HTTP sticky-buffer rules need the HTTP parser; FTP fixtures also enable the
+# native parser even when a rule deliberately inspects the reassembled TCP stream.
+# DNS (over TCP) and TLS fixtures feed hex payloads through the same TCP crafter.
 SURICATA_YAML = """\
 %YAML 1.1
 ---
@@ -30,14 +31,28 @@ vars:
   address-groups:
     HOME_NET: "[10.0.0.0/8]"
     EXTERNAL_NET: "!$HOME_NET"
+    HTTP_SERVERS: "$HOME_NET"
   port-groups:
     HTTP_PORTS: "[80, 2375, 2376, 3100, 8000, 8080, 8443, 8888]"
+    FTP_PORTS: "[21, 2121]"
 
 app-layer:
   protocols:
     http:
       enabled: yes
       ports: [80, 2375, 2376, 3100, 8000, 8080, 8443, 8888]
+    ftp:
+      enabled: yes
+      ports: [21, 2121]
+    dns:
+      tcp:
+        enabled: yes
+        detection-ports:
+          dp: 53
+    tls:
+      enabled: yes
+      detection-ports:
+        dp: 443
 
 outputs:
   - eve-log:

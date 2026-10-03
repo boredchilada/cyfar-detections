@@ -59,7 +59,17 @@ tests/
 
 The packed agent (UPX + garble) has no dedicated rule: on disk it is indistinguishable from any other UPX-packed Go binary. Detect packing generically, unpack with `upx -d`, then apply `n4d_agent_unpacked`.
 
-**Totals:** 18 Suricata rules, 11 YARA rules, 13 host hunt commands. More rules land as new engagement reports publish.
+### Citrix NetScaler CVE-2026-88771
+
+[The Pitboss Pipeline: NetScaler Exploit Requests Split Across Headers and Logs](https://cyfar.ca/engagements/the-pitboss-pipeline-netscaler-exploit-requests-split-across-headers-and-logs)
+
+| File | Type | Rules |
+|------|------|-------|
+| `suricata/netscaler-cve-2026-88771.rules` | Suricata | 5 (Pitboss log poisoning in the request body and User-Agent, INDEX log smuggling header, pylrk[.]cc DNS lookup and TLS SNI) |
+| `yara/netscaler-cve-2026-88771.yar` | YARA | 2 (FreeBSD Sliver implant, shell loader) |
+| `host/netscaler-cve-2026-88771.sh` | Host | 1 (dropped files, web server handler changes, INDEX marker in access logs, loader files and boot entry) |
+
+**Totals:** 23 Suricata rules, 13 YARA rules, 14 host hunt commands. More rules land as new engagement reports publish.
 
 ## Using the rules
 
@@ -110,6 +120,8 @@ tests:
       host: 198.51.100.10
       port: 8443
 ```
+
+Fixtures for protocols other than HTTP replace the request fields with raw client bytes: `raw` for text and `raw_hex` for binary payloads. The NetScaler DNS and TLS fixtures use `raw_hex` to send a DNS query over TCP and a TLS ClientHello.
 
 If you write your own Suricata rules, you can add a fixture and run the same validator to test them.
 

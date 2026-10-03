@@ -1,0 +1,60 @@
+name: "NetScaler 871002 - Two-Stage INDEX Log Smuggling Header (CVE-2026-88771, high)"
+
+rule: >-
+  alert http $EXTERNAL_NET any -> $HOME_NET any (msg:"CITRIX NETSCALER Two-Stage INDEX Log Smuggling Header Injection";
+  flow:to_server,established;
+  http.user_agent; content:"INDEX:"; nocase; fast_pattern;
+  pcre:"/INDEX\x3a[A-Za-z0-9+\/=]{20,}/i";
+  reference:cve,2026-88771;
+  classtype:attempted-admin; priority:2; sid:1000871002; rev:3;)
+
+tests:
+  - name: "positive-captured-index-user-agent"
+    expected_sids: [1000871002]
+    request:
+      client_ip: 203.0.113.15
+      method: GET
+      uri: /logon/LogonPoint/tmindex.html
+      port: 80
+      headers:
+        User-Agent: "INDEX:bWtkaXIgLXAgL3Zhci92cG4vYm9va21hcmsvIC9uZXRzY2FsZXIvbnNfZ3VpL3Zwbi8gL3Zhci9uZXRzY2FsZXIvZ3VpL3Zwbi8="
+
+  - name: "positive-lowercase-index-user-agent"
+    expected_sids: [1000871002]
+    request:
+      client_ip: 203.0.113.15
+      method: GET
+      uri: /vpn/index.html
+      port: 80
+      headers:
+        User-Agent: "index:bWtkaXIgLXAgL3Zhci92cG4vYm9va21hcmsv"
+
+  - name: "negative-standard-browser-user-agent"
+    expected_sids: []
+    request:
+      client_ip: 203.0.113.15
+      method: GET
+      uri: /logon/LogonPoint/tmindex.html
+      port: 80
+      headers:
+        User-Agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+
+  - name: "positive-index-not-at-start"
+    expected_sids: [1000871002]
+    request:
+      client_ip: 203.0.113.15
+      method: GET
+      uri: /logon/LogonPoint/tmindex.html
+      port: 80
+      headers:
+        User-Agent: "Mozilla/5.0 INDEX:bWtkaXIgLXAgL3Zhci92cG4vYm9va21hcmsv"
+
+  - name: "negative-short-index-word"
+    expected_sids: []
+    request:
+      client_ip: 203.0.113.15
+      method: GET
+      uri: /logon/LogonPoint/tmindex.html
+      port: 80
+      headers:
+        User-Agent: "INDEX:short"
