@@ -1,0 +1,49 @@
+name: "EXPLOIT JFrog Artifactory Forged Empty-Hash-KID JOIN JWT (CVE-2026-82329)"
+
+rule: >-
+  alert http $EXTERNAL_NET any -> $HOME_NET any
+  (msg:"EXPLOIT JFrog Artifactory Forged Empty-Hash-KID JOIN JWT (CVE-2026-82329)";
+  flow:to_server,established;
+  http.method; content:"POST";
+  http.uri; content:"/access/api/v1/registry/join"; fast_pattern;
+  http.request_body;
+  content:"eyJhbGciOiJIUzI1NiIsImtpZCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ."; startswith;
+  reference:cve,2026-82329;
+  classtype:attempted-admin;
+  sid:1000209003; rev:1;
+  metadata:created_at 2026_10_19, deployment Ingress;)
+
+tests:
+  - name: "positive-captured-forged-join-jwt"
+    expected_sids: [1000209003]
+    request:
+      client_ip: 198.51.100.22
+      method: POST
+      uri: /access/api/v1/registry/join
+      host: target.example.com
+      headers:
+        User-Agent: Mozilla/5.0
+        Content-Type: text/plain
+      body: "eyJhbGciOiJIUzI1NiIsImtpZCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ.eyJzZXJ2aWNlX2lkIjoic3ZjMTIzNDU2Iiwic2tpcF9ub2RlX3JlZ2lzdHJhdGlvbiI6dHJ1ZSwiaWF0IjoxNzkwMDAwMDAwfQ.signature"
+
+  - name: "negative-legitimate-join-jwt-different-kid"
+    expected_sids: []
+    request:
+      client_ip: 198.51.100.22
+      method: POST
+      uri: /access/api/v1/registry/join
+      host: target.example.com
+      headers:
+        Content-Type: text/plain
+      body: "eyJhbGciOiJIUzI1NiIsImtpZCI6IjEyMzQ1Njc4OTBhYmNkZWYxMjM0NTY3ODkwYWJjZGVmMTIzNDU2Nzg5MGFiY2RlZjEyMzQ1Njc4OTBhYmNkZWYifQ.eyJzZXJ2aWNlX2lkIjoic3ZjMSJ9.sig"
+
+  - name: "negative-aws-token-route"
+    expected_sids: []
+    request:
+      client_ip: 198.51.100.22
+      method: POST
+      uri: /access/api/v1/aws/token/
+      host: target.example.com
+      headers:
+        Content-Type: application/json
+      body: "{}"

@@ -1,0 +1,22 @@
+name: "Normal Docker Engine API traffic"
+requests:
+  - name: "docker-version-check"
+    method: GET
+    uri: /v1.43/version
+    host: docker-host.internal
+    port: 2375
+    client_ip: "10.0.5.22"
+  - name: "docker-list-containers"
+    method: GET
+    uri: /v1.43/containers/json
+    host: docker-host.internal
+    port: 2375
+    client_ip: "10.0.5.22"
+  - name: "docker-pull-image"
+    method: POST
+    uri: /v1.43/images/create?fromImage=nginx&tag=latest
+    host: docker-host.internal
+    port: 2375
+    client_ip: "10.0.5.22"
+    headers:
+      Content-Type: application/json

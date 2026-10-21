@@ -1,0 +1,68 @@
+name: "voidlink 1004: Docker create body uses chroot for host-namespace escape"
+
+# The rule matches any source. Addresses default to hosts inside HOME_NET; the external
+# source test sets client_ip.
+rule: |-
+  alert http any any -> $HOME_NET 2375 (msg:"ATTACK Docker create body uses chroot for host-namespace escape";  flow:to_server,established;  http.method; content:"POST";  http.uri; content:"/containers/create";  http.request_body; content:"\"chroot\""; content:"\"/host\""; distance:0; within:40;  classtype:attempted-admin; sid:1000231004; rev:2;  metadata:created_at 2026-05-28;)
+
+tests:
+  - name: "positive-chroot-host"
+    expected_sids: [1000231004]
+    request:
+      method: POST
+      uri: /v1.47/containers/create
+      host: 198.51.100.10
+      port: 2375
+      headers:
+        Content-Type: application/json
+      body: >-
+        {"Image":"alpine","Cmd":["chroot","/host","/bin/bash"],"HostConfig":{"Binds":["/:/host"]}}
+
+  - name: "positive-external-source"
+    expected_sids: [1000231004]
+    request:
+      client_ip: 203.0.113.5
+      method: POST
+      uri: /v1.47/containers/create
+      host: 198.51.100.10
+      port: 2375
+      headers:
+        Content-Type: application/json
+      body: >-
+        {"Image":"alpine","Cmd":["chroot","/host","/bin/sh","-c","id"],"HostConfig":{"Binds":["/:/host"]}}
+
+  - name: "negative-benign-cmd"
+    expected_sids: []
+    request:
+      method: POST
+      uri: /v1.47/containers/create
+      host: 198.51.100.10
+      port: 2375
+      headers:
+        Content-Type: application/json
+      body: >-
+        {"Image":"nginx","Cmd":["nginx","-g","daemon off;"]}
+
+  - name: "negative-chroot-other-path"
+    expected_sids: []
+    request:
+      method: POST
+      uri: /v1.47/containers/create
+      host: 198.51.100.10
+      port: 2375
+      headers:
+        Content-Type: application/json
+      body: >-
+        {"Image":"alpine","Cmd":["chroot","/newroot","/bin/sh"]}
+
+  - name: "negative-host-path-without-chroot"
+    expected_sids: []
+    request:
+      method: POST
+      uri: /v1.47/containers/create
+      host: 198.51.100.10
+      port: 2375
+      headers:
+        Content-Type: application/json
+      body: >-
+        {"Image":"alpine","Cmd":["ls","/host"]}

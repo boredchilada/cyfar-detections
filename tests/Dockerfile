@@ -8,6 +8,6 @@ RUN dnf install -y python3 python3-pip python3-pyyaml && \
 
 WORKDIR /validator
 
-COPY craft_pcap.py validate.py ./
+COPY craft_pcap.py validate.py benign_check.py ./
 
 ENTRYPOINT ["python3", "validate.py"]

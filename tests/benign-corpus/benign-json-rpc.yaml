@@ -1,0 +1,20 @@
+name: "Normal JSON-RPC traffic"
+requests:
+  - name: "ethereum-getbalance"
+    method: POST
+    uri: /api/v1/rpc
+    host: eth-node.example.com
+    port: 8545
+    client_ip: "203.0.113.50"
+    headers:
+      Content-Type: application/json
+    body: '{"jsonrpc":"2.0","method":"eth_getBalance","params":["0xdeadbeef","latest"],"id":1}'
+  - name: "generic-jsonrpc-notify"
+    method: POST
+    uri: /jsonrpc
+    host: api.example.com
+    port: 80
+    client_ip: "198.51.100.10"
+    headers:
+      Content-Type: application/json
+    body: '{"jsonrpc":"2.0","method":"getStatus","params":{}}'

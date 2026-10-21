@@ -1,0 +1,42 @@
+name: "voidlink 1006: 'Polly for Sonya' Docker pwn tooling marker"
+
+# The rule matches any port. Addresses default to hosts inside HOME_NET.
+rule: |-
+  alert http any any -> $HOME_NET any (msg:"ATTACK 'Polly for Sonya' Cyrillic-language Docker pwn tooling marker";  flow:to_server,established;  http.method; content:"POST";  http.request_body; content:"by Polly for";  classtype:attempted-admin; sid:1000231006; rev:1;  metadata:created_at 2026-05-28;)
+
+tests:
+  - name: "positive-polly-byline"
+    expected_sids: [1000231006]
+    request:
+      method: POST
+      uri: /v1.47/containers/create
+      host: 198.51.100.10
+      port: 2375
+      headers:
+        Content-Type: application/json
+      body: >-
+        {"Cmd":["sh","-c","cat > /mnt/tmp/pwn.sh; echo '# by Polly for Sonya'"]}
+
+  - name: "positive-other-port"
+    expected_sids: [1000231006]
+    request:
+      method: POST
+      uri: /v1.47/containers/create
+      host: 198.51.100.10
+      port: 8080
+      headers:
+        Content-Type: application/json
+      body: >-
+        {"Cmd":["sh","-c","echo '# by Polly for Sonya'"]}
+
+  - name: "negative-no-byline"
+    expected_sids: []
+    request:
+      method: POST
+      uri: /v1.47/containers/create
+      host: 198.51.100.10
+      port: 2375
+      headers:
+        Content-Type: application/json
+      body: >-
+        {"Cmd":["sh","-c","echo just a normal script"]}

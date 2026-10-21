@@ -1,0 +1,78 @@
+name: "voidlink 1002: Docker Engine API exec/start from external source"
+
+# Source and destination addresses default to hosts inside HOME_NET. Tests that need an
+# external client set client_ip.
+rule: |-
+  alert http $EXTERNAL_NET any -> $HOME_NET 2375 (msg:"ATTACK Inbound Docker Engine API exec/start from external source";  flow:to_server,established;  http.method; content:"POST";  http.uri; content:"/exec/"; content:"/start"; distance:0;  classtype:attempted-admin; priority:2; sid:1000231002; rev:3;  metadata:created_at 2026-05-28;)
+
+tests:
+  - name: "positive-exec-start-external"
+    expected_sids: [1000231002]
+    request:
+      client_ip: 203.0.113.5
+      method: POST
+      uri: /v1.47/exec/e8b3f7b41e0b4b1fa41e3c6d7c0f9a24/start
+      host: 198.51.100.10
+      port: 2375
+      headers:
+        Content-Type: application/json
+        User-Agent: Docker-Client/29.2.1 (linux)
+      body: >-
+        {"Detach":false,"Tty":false}
+
+  - name: "negative-internal-source"
+    expected_sids: []
+    # No client_ip: the default client is inside HOME_NET, so $EXTERNAL_NET does not match.
+    request:
+      method: POST
+      uri: /v1.47/exec/e8b3f7b41e0b4b1fa41e3c6d7c0f9a24/start
+      host: 198.51.100.10
+      port: 2375
+      headers:
+        Content-Type: application/json
+      body: >-
+        {"Detach":false,"Tty":false}
+
+  - name: "negative-create-no-exec"
+    expected_sids: []
+    request:
+      client_ip: 203.0.113.5
+      method: POST
+      uri: /v1.47/containers/create
+      host: 198.51.100.10
+      port: 2375
+      headers:
+        Content-Type: application/json
+      body: >-
+        {"Image":"alpine"}
+
+  - name: "negative-exec-create-not-start"
+    expected_sids: []
+    request:
+      client_ip: 203.0.113.5
+      method: POST
+      uri: /v1.47/containers/abcdef0123/exec
+      host: 198.51.100.10
+      port: 2375
+      headers:
+        Content-Type: application/json
+      body: >-
+        {"Cmd":["sh","/mnt/tmp/pwn.sh"]}
+
+  - name: "negative-container-start-not-exec-start"
+    expected_sids: []
+    request:
+      client_ip: 203.0.113.5
+      method: POST
+      uri: /v1.47/containers/abcdef0123/start
+      host: 198.51.100.10
+      port: 2375
+
+  - name: "negative-exec-resize-not-start"
+    expected_sids: []
+    request:
+      client_ip: 203.0.113.5
+      method: POST
+      uri: "/v1.47/exec/e8b3f7b41e0b4b1fa41e3c6d7c0f9a24/resize?h=40&w=120"
+      host: 198.51.100.10
+      port: 2375

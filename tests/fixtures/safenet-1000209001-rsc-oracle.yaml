@@ -1,0 +1,53 @@
+name: "MALWARE SafeNetv2 React Server Components RCE Oracle (CVE-2025-55182)"
+
+rule: >-
+  alert http $EXTERNAL_NET any -> $HOME_NET any
+  (msg:"MALWARE SafeNetv2 React Server Components RCE Oracle (CVE-2025-55182)";
+  flow:to_server,established;
+  http.method; content:"POST";
+  http.request_body;
+  content:"__proto__:then";
+  content:"_response"; distance:0;
+  content:"vUlN_cHeCk_sUcCeSs_69420"; fast_pattern; distance:0;
+  reference:cve,2025-55182;
+  classtype:web-application-attack;
+  sid:1000209001; rev:1;
+  metadata:created_at 2026_10_19, deployment Ingress;)
+
+tests:
+  - name: "positive-captured-safenet-rsc-oracle"
+    expected_sids: [1000209001]
+    request:
+      client_ip: 198.51.100.20
+      method: POST
+      uri: /
+      host: target.example.com
+      headers:
+        User-Agent: Mozilla/5.0
+        Next-Action: x
+        Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+      body: "------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name=\"0\"\r\n\r\n{\"then\":\"$1:__proto__:then\",\"status\":\"resolved_model\",\"reason\":-1,\"value\":\"{\\\"then\\\":\\\"$B1337\\\"}\",\"_response\":{\"_prefix\":\"var res=(function(){return 'vUlN_cHeCk_sUcCeSs_69420';})();throw Object.assign(new Error('NEXT_REDIRECT'),{digest:`NEXT_REDIRECT;push;/x?d=${encodeURIComponent(String(res))};307;`});\",\"_chunks\":\"$Q2\",\"_formData\":{\"get\":\"$1:constructor:constructor\"}}}\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name=\"1\"\r\n\r\n\"$@0\"\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW--\r\n"
+
+  - name: "negative-generic-rsc-exploit-without-safenet-oracle"
+    expected_sids: []
+    request:
+      client_ip: 198.51.100.20
+      method: POST
+      uri: /
+      host: target.example.com
+      headers:
+        User-Agent: Mozilla/5.0
+        Next-Action: x
+        Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+      body: "------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name=\"0\"\r\n\r\n{\"then\":\"$1:__proto__:then\",\"status\":\"resolved_model\",\"reason\":-1,\"_response\":{\"_prefix\":\"return 'id';\",\"_formData\":{\"get\":\"$1:constructor:constructor\"}}}\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW--\r\n"
+
+  - name: "negative-benign-multipart-post"
+    expected_sids: []
+    request:
+      client_ip: 198.51.100.20
+      method: POST
+      uri: /upload
+      host: target.example.com
+      headers:
+        Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+      body: "------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name=\"comment\"\r\n\r\nNormal form submission\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW--\r\n"

@@ -1,0 +1,23 @@
+name: "Normal HTTP binary downloads"
+requests:
+  - name: "github-release-download"
+    method: GET
+    uri: /releases/download/v1.0.0/tool-linux-amd64
+    host: github.com
+    port: 443
+    client_ip: "10.0.5.50"
+    server_ip: "140.82.121.3"
+  - name: "apt-package-download"
+    method: GET
+    uri: /pool/main/n/nginx/nginx_1.24.0-1_amd64.deb
+    host: archive.ubuntu.com
+    port: 80
+    client_ip: "10.0.5.50"
+    server_ip: "91.189.91.81"
+  - name: "pip-package-download"
+    method: GET
+    uri: /packages/requests-2.31.0-py3-none-any.whl
+    host: files.pythonhosted.org
+    port: 443
+    client_ip: "10.0.5.50"
+    server_ip: "151.101.128.223"

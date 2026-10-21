@@ -12,7 +12,9 @@ yara/              YARA rules for file-level detection
 host/              Shell hunt commands for post-compromise triage
 tests/
   fixtures/        YAML test cases (positive + negative) per Suricata rule
+  benign-corpus/   Normal-traffic specs for false positive testing
   validate.py      Test runner: builds pcaps, replays through Suricata, checks SIDs
+  benign_check.py  FP checker: runs all rules against the benign corpus
   craft_pcap.py    Generates pcaps from YAML specs
   Dockerfile       Suricata 7.0 container for the runner
 ```
@@ -59,6 +61,34 @@ tests/
 
 The packed agent (UPX + garble) has no dedicated rule: on disk it is indistinguishable from any other UPX-packed Go binary. Detect packing generically, unpack with `upx -d`, then apply `n4d_agent_unpacked`.
 
+### cPanel/WHM Alfa Team Shell
+
+[cPanel Exploit Attempt Uncovers Alfa Team Shell and AnonSec LPE Chain](https://cyfar.ca/engagements/cpanel-exploit-attempt-uncovers-alfa-team-shell-and-anonsec-lpe-chain)
+
+| File | Type | Rules |
+|------|------|-------|
+| `yara/cpanel-alfa-team-shell.yar` | YARA | 1 (Alfa Team Shell 4.1 Tesla source or Base64 wrapper) |
+
+### Boatnet Docker-delivered bot with EtherHiding C2
+
+[Get Boated: Docker-Delivered Mirai-Linked Malware With EtherHiding C2](https://cyfar.ca/engagements/get-boated-docker-delivered-mirai-linked-malware-with-etherhiding-c2)
+
+| File | Type | Rules |
+|------|------|-------|
+| `suricata/boatnet-docker-etherhiding.rules` | Suricata | 2 (Docker API archive upload into a host-mounted path, Boatnet execution argument in a Docker API request) |
+| `yara/boatnet-docker-etherhiding.yar` | YARA | 2 (UPX-packed build with the trailing suffix, unpacked build) |
+| `host/boatnet-docker-etherhiding.sh` | Host | 1 (drop and lock paths, installed binaries by marker, systemd and cron persistence, kworker masquerade) |
+
+### Hermes plugin and AdaptixC2 delivered through the Docker API
+
+[A Miner Was Only the First Clue: From Docker to Hermes and AdaptixC2](https://cyfar.ca/engagements/a-miner-was-only-the-first-clue-from-docker-to-hermes-and-adaptixc2)
+
+| File | Type | Rules |
+|------|------|-------|
+| `host/docker-hermes-adaptixc2.sh` | Host | 1 (hermes-internal binary, unit and plugin directory, kworker miner masquerade, miner placements, credential stealer output, cron) |
+
+The report's Suricata rule is SID 1000231001, listed in the VoidLink section above.
+
 ### Citrix NetScaler CVE-2026-88771
 
 [The Pitboss Pipeline: NetScaler Log Poisoning and a FreeBSD Sliver Implant](https://cyfar.ca/engagements/the-pitboss-pipeline-netscaler-log-poisoning-and-a-freebsd-sliver-implant)
@@ -69,7 +99,17 @@ The packed agent (UPX + garble) has no dedicated rule: on disk it is indistingui
 | `yara/netscaler-cve-2026-88771.yar` | YARA | 2 (FreeBSD Sliver implant, shell loader) |
 | `host/netscaler-cve-2026-88771.sh` | Host | 1 (dropped files, web server handler changes, INDEX marker in access logs, loader files and boot entry) |
 
-**Totals:** 23 Suricata rules, 13 YARA rules, 14 host hunt commands. More rules land as new engagement reports publish.
+### SafeNetv2 Go multi-exploit worm
+
+[Scan, Exploit, Spread: Inside SafeNetv2](https://cyfar.ca/engagements/scan-exploit-spread-inside-safenetv2)
+
+| File | Type | Rules |
+|------|------|-------|
+| `suricata/safenet-multi-exploit-worm.rules` | Suricata | 3 (CVE-2025-55182 RCE oracle request, CVE-2025-55182 Node.js dropper deployment, forged JFrog Artifactory empty-hash-kid JOIN JWT) |
+| `yara/safenet-multi-exploit-worm.yar` | YARA | 1 (SafeNetv2 `safenet/client` Go worm ELF across amd64, 386, and arm64) |
+| `host/safenet-multi-exploit-worm.sh` | Host | 1 (candidate temporary and process working directories, `SAFENET_*` environment keys, TCP/10001 sockets) |
+
+**Totals:** 28 Suricata rules, 17 YARA rules, 17 host hunt commands. More rules land as new engagement reports publish.
 
 ## Using the rules
 

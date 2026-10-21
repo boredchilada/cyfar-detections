@@ -1,0 +1,54 @@
+name: "Boatnet 1000262001 — Docker API archive upload into a host-mounted path"
+
+rule: >-
+  alert http $EXTERNAL_NET any -> $HOME_NET 2375 (msg:"CYFAR ATTACK Docker API archive upload into host-mounted path"; flow:established,to_server; http.method; content:"PUT"; http.uri; content:"/containers/"; content:"/archive?path=/host/"; distance:0; fast_pattern; classtype:attempted-admin; sid:1000262001; rev:1; metadata:created_at 2026-09-25;)
+
+tests:
+  - name: "positive-dkprobe-upload-host-tmp"
+    expected_sids: [1000262001]
+    request:
+      method: PUT
+      uri: /containers/a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90/archive?path=/host/tmp
+      host: 198.51.100.10
+      port: 2375
+      client_ip: "1.2.3.4"
+      headers:
+        Content-Type: application/x-tar
+        User-Agent: Docker-Client/24.0.0
+      body: >-
+        .dkprobe-placeholder-tar-body
+
+  - name: "positive-versioned-api-host-var-cache"
+    expected_sids: [1000262001]
+    request:
+      method: PUT
+      uri: /v1.43/containers/abc123/archive?path=/host/var/cache
+      host: 198.51.100.10
+      port: 2375
+      client_ip: "1.2.3.4"
+      headers:
+        Content-Type: application/x-tar
+      body: >-
+        tar-body
+
+  - name: "negative-upload-container-tmp"
+    expected_sids: []
+    request:
+      method: PUT
+      uri: /containers/a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90/archive?path=/tmp
+      host: 198.51.100.10
+      port: 2375
+      client_ip: "1.2.3.4"
+      headers:
+        Content-Type: application/x-tar
+      body: >-
+        tar-body
+
+  - name: "negative-archive-read-host-path"
+    expected_sids: []
+    request:
+      method: GET
+      uri: /containers/abc123/archive?path=/host/tmp/.dkprobe
+      host: 198.51.100.10
+      port: 2375
+      client_ip: "1.2.3.4"

@@ -2,3 +2,8 @@ __pycache__/
 *.pyc
 tests/output/
 *.pcap
+
+# Internal agent context — never publish
+AGENTS.md
+CLAUDE.md
+.claude/

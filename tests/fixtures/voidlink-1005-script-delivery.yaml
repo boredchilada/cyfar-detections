@@ -1,0 +1,66 @@
+name: "voidlink 1005: dockerpwn persistence script delivery in HTTP request body"
+
+# The rule matches any port. Addresses default to hosts inside HOME_NET.
+rule: |-
+  alert http any any -> $HOME_NET any (msg:"ATTACK dockerpwn persistence script delivery in HTTP request body";  flow:to_server,established;  http.method; content:"POST";  http.request_body; content:"dockerpwn"; nocase;  classtype:attempted-admin; sid:1000231005; rev:1;  metadata:created_at 2026-05-28;)
+
+tests:
+  - name: "positive-dockerpwn-marker"
+    expected_sids: [1000231005]
+    request:
+      method: POST
+      uri: /v1.47/containers/abcdef0123/exec
+      host: 198.51.100.10
+      port: 2375
+      headers:
+        Content-Type: application/json
+      body: >-
+        {"Cmd":["sh","-c","cat > /mnt/tmp/pwn.sh; echo '# BEGIN dockerpwn managed ssh'"]}
+
+  - name: "positive-nocase"
+    expected_sids: [1000231005]
+    request:
+      method: POST
+      uri: /v1.47/containers/create
+      host: 198.51.100.10
+      port: 2375
+      headers:
+        Content-Type: application/json
+      body: >-
+        {"Cmd":["sh","-c","echo DAEMON.JSON.DISABLED-BY-DOCKERPWN"]}
+
+  - name: "positive-other-port"
+    expected_sids: [1000231005]
+    request:
+      method: POST
+      uri: /v1.47/containers/create
+      host: 198.51.100.10
+      port: 8080
+      headers:
+        Content-Type: application/json
+      body: >-
+        {"Cmd":["sh","-c","echo '# BEGIN dockerpwn managed ssh'"]}
+
+  - name: "negative-benign-body"
+    expected_sids: []
+    request:
+      method: POST
+      uri: /v1.47/containers/create
+      host: 198.51.100.10
+      port: 2375
+      headers:
+        Content-Type: application/json
+      body: >-
+        {"Image":"redis","Cmd":["redis-server"]}
+
+  - name: "negative-put-not-post"
+    expected_sids: []
+    request:
+      method: PUT
+      uri: /v1.47/containers/create
+      host: 198.51.100.10
+      port: 2375
+      headers:
+        Content-Type: application/json
+      body: >-
+        {"Cmd":["sh","-c","echo '# BEGIN dockerpwn managed ssh'"]}

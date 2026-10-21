@@ -1,0 +1,11 @@
+name: "Legitimate internal MCP initialize"
+requests:
+  - name: "internal-mcp-init"
+    method: POST
+    uri: /mcp
+    host: mcp-server.internal
+    port: 3000
+    client_ip: "10.0.5.100"
+    headers:
+      Content-Type: application/json
+    body: '{"id":1,"jsonrpc":"2.0","method":"initialize","params":{"capabilities":{},"clientInfo":{"name":"claude-desktop","version":"1.0"},"protocolVersion":"2024-11-05"}}'
