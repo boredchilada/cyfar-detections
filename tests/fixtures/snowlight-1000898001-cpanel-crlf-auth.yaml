@@ -1,0 +1,62 @@
+name: "EXPLOIT cPanel Basic Auth CRLF Session Injection (CVE-2026-41940)"
+
+rule: >-
+  alert http $EXTERNAL_NET any -> $HOME_NET any
+  (msg:"EXPLOIT cPanel Basic Auth CRLF Session Injection (CVE-2026-41940)";
+  flow:to_server,established;
+  http.header; content:"authorization: basic "; nocase;
+  base64_decode:bytes 256,offset 0,relative;
+  base64_data; pcre:"/\r?\n(?:successful_(?:internal|external)_auth_with_timestamp|hasroot|tfa_verified)=/";
+  reference:cve,2026-41940;
+  classtype:attempted-admin;
+  sid:1000898001; rev:1;
+  metadata:created_at 2026_10_21, deployment Ingress;)
+
+tests:
+  - name: "positive-captured-cpanel-crlf-basic-auth"
+    expected_sids: [1000898001]
+    request:
+      client_ip: 123.202.208.37
+      method: GET
+      uri: /
+      host: "10.0.0.25:2087"
+      port: 8080
+      headers:
+        User-Agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+        Authorization: "Basic cm9vdDp4DQpzdWNjZXNzZnVsX2ludGVybmFsX2F1dGhfd2l0aF90aW1lc3RhbXA9MTc5MTc0MjI0Ng0KaGFzcm9vdD0wDQpueD08NiBjaGFycz49MQ=="
+        Cookie: "whostmgrsession=%3Atestsession"
+
+  - name: "positive-watchtowr-poc-order"
+    expected_sids: [1000898001]
+    request:
+      client_ip: 198.51.100.15
+      method: GET
+      uri: /
+      host: "10.0.0.25:2087"
+      port: 8080
+      headers:
+        Authorization: "Basic cm9vdDp4DQpoYXNyb290PTENCnRmYV92ZXJpZmllZD0xDQp1c2VyPXJvb3QNCmNwX3NlY3VyaXR5X3Rva2VuPS9jcHNlc3M5OTk5OTk5OTk5DQpzdWNjZXNzZnVsX2ludGVybmFsX2F1dGhfd2l0aF90aW1lc3RhbXA9MTc5MTc0MjI0Ng=="
+        Cookie: "whostmgrsession=%3Atest"
+
+  - name: "negative-normal-basic-auth"
+    expected_sids: []
+    request:
+      client_ip: 198.51.100.10
+      method: GET
+      uri: /
+      host: "10.0.0.25:2087"
+      port: 8080
+      headers:
+        Authorization: "Basic cm9vdDp3cm9uZ3Bhc3N3b3Jk"
+
+  - name: "negative-cpanel-login-post-without-basic-auth"
+    expected_sids: []
+    request:
+      client_ip: 198.51.100.10
+      method: POST
+      uri: /login/?login_only=1
+      host: "10.0.0.25:2087"
+      port: 8080
+      headers:
+        Content-Type: "application/x-www-form-urlencoded"
+      body: "user=root&pass=invalid"

@@ -13,5 +13,6 @@ Which rules came from which published engagement.
 | [A Miner Was Only the First Clue: From Docker to Hermes and AdaptixC2](https://cyfar.ca/engagements/a-miner-was-only-the-first-clue-from-docker-to-hermes-and-adaptixc2) | 0 | 0 | 1 | 1 |
 | [The Pitboss Pipeline: NetScaler Log Poisoning and a FreeBSD Sliver Implant](https://cyfar.ca/engagements/the-pitboss-pipeline-netscaler-log-poisoning-and-a-freebsd-sliver-implant) | 5 | 2 | 1 | 8 |
 | [Scan, Exploit, Spread: Inside SafeNetv2](https://cyfar.ca/engagements/scan-exploit-spread-inside-safenetv2) | 3 | 1 | 1 | 5 |
+| [Highway to VShell: cPanel Cron Jobs, a Docker Upload, and SNOWLIGHT](https://cyfar.ca/engagements/highway-to-vshell-cpanel-cron-jobs-a-docker-upload-and-snowlight) | 5 | 3 | 1 | 9 |
 
 The Hermes report cites Suricata SID 1000231001, which is counted once, under the VoidLink report.

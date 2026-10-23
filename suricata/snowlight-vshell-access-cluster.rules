@@ -1,0 +1,18 @@
+# snowlight-vshell-access-cluster.rules
+# Highway to VShell: cPanel Cron Jobs, a Docker Upload, and SNOWLIGHT
+# https://github.com/boredchilada/cyfar-detections
+
+# cPanel Basic authorization with injected session records (CVE-2026-41940)
+alert http $EXTERNAL_NET any -> $HOME_NET any (msg:"EXPLOIT cPanel Basic Auth CRLF Session Injection (CVE-2026-41940)"; flow:to_server,established; http.header; content:"authorization: basic "; nocase; base64_decode:bytes 256,offset 0,relative; base64_data; pcre:"/\r?\n(?:successful_(?:internal|external)_auth_with_timestamp|hasroot|tfa_verified)=/"; reference:cve,2026-41940; classtype:attempted-admin; sid:1000898001; rev:1; metadata:created_at 2026_10_21, deployment Ingress;)
+
+# cPanel JSON-API Cron add_line stager persistence
+alert http $EXTERNAL_NET any -> $HOME_NET any (msg:"MALWARE cPanel JSON-API Cron add_line Shell Stager Persistence"; flow:to_server,established; http.method; content:"GET"; http.uri; content:"/json-api/cpanel?"; content:"cpanel_jsonapi_module=Cron"; fast_pattern; content:"cpanel_jsonapi_func=add_line"; content:"command="; pcre:"/command=[^&]*(?:RCEOK|%2Fslw|%2Fslt|public_html%2F\.s\.txt)/i"; classtype:attempted-admin; sid:1000898005; rev:1; metadata:created_at 2026_10_21, deployment Ingress;)
+
+# /slw architecture selector request
+alert http $HOME_NET any -> $EXTERNAL_NET any (msg:"MALWARE SNOWLIGHT /slw Architecture Selector Stage Request"; flow:to_server,established; http.method; content:"GET"; http.uri; content:"&t=ws&a="; fast_pattern; http.uri; content:"&stage=true"; classtype:trojan-activity; sid:1000898002; rev:1; metadata:created_at 2026_10_21, deployment Egress;)
+
+# SNOWLIGHT stage request
+alert http $HOME_NET any -> $EXTERNAL_NET any (msg:"MALWARE SNOWLIGHT Downloader Encoded Payload Request"; flow:to_server,established; http.method; content:"GET"; http.uri; content:"/?a="; startswith; content:"&t=ws_&p="; distance:0; http.user_agent; content:"Mozilla/5.0 (Windows NT 6.1|3b| rv:48.0) Gecko/20100101 Firefox/48.0"; fast_pattern; classtype:trojan-activity; sid:1000898003; rev:1; metadata:created_at 2026_10_21, deployment Egress;)
+
+# Docker API container create or exec with VShell stageless download
+alert http any any -> $HOME_NET 2375 (msg:"MALWARE Docker API Container Command Requesting VShell Stageless Payload"; flow:to_server,established; http.method; content:"POST"; http.uri; content:"/containers/"; http.request_body; content:"/api/download/stageless"; fast_pattern; content:"Token:"; classtype:trojan-activity; sid:1000898004; rev:1; metadata:created_at 2026_10_21, deployment Internal;)

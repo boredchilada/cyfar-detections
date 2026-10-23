@@ -109,7 +109,17 @@ The report's Suricata rule is SID 1000231001, listed in the VoidLink section abo
 | `yara/safenet-multi-exploit-worm.yar` | YARA | 1 (SafeNetv2 `safenet/client` Go worm ELF across amd64, 386, and arm64) |
 | `host/safenet-multi-exploit-worm.sh` | Host | 1 (candidate temporary and process working directories, `SAFENET_*` environment keys, TCP/10001 sockets) |
 
-**Totals:** 28 Suricata rules, 17 YARA rules, 17 host hunt commands. More rules land as new engagement reports publish.
+### cPanel CVE-2026-41940, Docker API upload, SNOWLIGHT, and VShell 4.9.3
+
+[Highway to VShell: cPanel Cron Jobs, a Docker Upload, and SNOWLIGHT](https://cyfar.ca/engagements/highway-to-vshell-cpanel-cron-jobs-a-docker-upload-and-snowlight)
+
+| File | Type | Rules |
+|------|------|-------|
+| `suricata/snowlight-vshell-access-cluster.rules` | Suricata | 5 (cPanel CVE-2026-41940 Basic Auth CR/LF session injection, cPanel JSON-API Cron `add_line` stager persistence, `/slw` architecture selector request, SNOWLIGHT stage request, Docker API stageless download command) |
+| `yara/snowlight-vshell-access-cluster.yar` | YARA | 3 (`/slw` shell loader, SNOWLIGHT ELF loader across amd64/386/arm64/armv7, decoded VShell 4.9.3 builds sharing the 20,480-byte AES-128-CBC configuration blob) |
+| `host/snowlight-vshell-access-cluster.sh` | Host | 1 (`/memfd:a (deleted)` `[kworker/0:2]` process check, `/tmp/log_de.log` and `a19b30acws` file check, cPanel raw session and crontab checks) |
+
+**Totals:** 33 Suricata rules, 20 YARA rules, 18 host hunt commands. More rules land as new engagement reports publish.
 
 ## Using the rules
 

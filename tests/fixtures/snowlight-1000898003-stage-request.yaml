@@ -1,0 +1,50 @@
+name: "MALWARE SNOWLIGHT Downloader Encoded Payload Request"
+
+rule: >-
+  alert http $HOME_NET any -> $EXTERNAL_NET any
+  (msg:"MALWARE SNOWLIGHT Downloader Encoded Payload Request";
+  flow:to_server,established;
+  http.method; content:"GET";
+  http.uri; content:"/?a="; startswith;
+  content:"&t=ws_&p="; distance:0;
+  http.user_agent; content:"Mozilla/5.0 (Windows NT 6.1|3b| rv:48.0) Gecko/20100101 Firefox/48.0"; fast_pattern;
+  classtype:trojan-activity;
+  sid:1000898003; rev:1;
+  metadata:created_at 2026_10_21, deployment Egress;)
+
+tests:
+  - name: "positive-snowlight-l64-payload-request"
+    expected_sids: [1000898003]
+    request:
+      client_ip: 10.0.0.25
+      server_ip: 92.119.178.59
+      port: 8080
+      method: GET
+      uri: "/?a=l64&h=92.119.178.59&t=ws_&p=8988"
+      host: "92.119.178.59:8988"
+      headers:
+        User-Agent: "Mozilla/5.0 (Windows NT 6.1; rv:48.0) Gecko/20100101 Firefox/48.0"
+
+  - name: "negative-firefox48-benign-uri"
+    expected_sids: []
+    request:
+      client_ip: 10.0.0.25
+      server_ip: 198.51.100.50
+      port: 8080
+      method: GET
+      uri: "/index.html"
+      host: "www.example.com"
+      headers:
+        User-Agent: "Mozilla/5.0 (Windows NT 6.1; rv:48.0) Gecko/20100101 Firefox/48.0"
+
+  - name: "negative-slw-stage-uri-with-curl-ua"
+    expected_sids: []
+    request:
+      client_ip: 10.0.0.25
+      server_ip: 92.119.178.59
+      port: 8080
+      method: GET
+      uri: "/?a=l64&h=92.119.178.59&t=ws_&p=8988"
+      host: "92.119.178.59:8988"
+      headers:
+        User-Agent: "curl/8.5.0"

