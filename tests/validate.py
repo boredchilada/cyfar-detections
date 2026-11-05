@@ -9,16 +9,39 @@ Designed to run inside the Docker container (jasonish/suricata:7.0 base).
 """
 
 import glob
+import hashlib
 import json
 import os
 import shutil
 import subprocess
 import sys
 import tempfile
+from datetime import datetime, timezone
 
 import yaml
 
 from craft_pcap import craft_pcap
+
+
+def sha256_file(path):
+    """Return the SHA-256 digest of a file."""
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def suricata_version():
+    """Return the native engine version for the validation receipt."""
+    result = subprocess.run(
+        ["suricata", "--build-info"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    text = (result.stdout or result.stderr).strip()
+    return text.splitlines()[0] if text else f"exit={result.returncode}"
 
 # Minimal Suricata configuration for HTTP, cleartext FTP, DNS and TLS fixtures.
 # HTTP sticky-buffer rules need the HTTP parser; FTP fixtures also enable the
@@ -31,7 +54,6 @@ vars:
   address-groups:
     HOME_NET: "[10.0.0.0/8]"
     EXTERNAL_NET: "!$HOME_NET"
-    HTTP_SERVERS: "$HOME_NET"
   port-groups:
     HTTP_PORTS: "[80, 2375, 2376, 3100, 8000, 8080, 8443, 8888]"
     FTP_PORTS: "[21, 2121]"
@@ -52,7 +74,7 @@ app-layer:
     tls:
       enabled: yes
       detection-ports:
-        dp: 443
+        dp: [443, 50031]
 
 outputs:
   - eve-log:
@@ -166,14 +188,22 @@ def fire_test(rule_path, yaml_path, pcap_path, log_dir, expected_sids):
         return True, "no alerts (correct for negative test)"
 
 
-def run_fixture(fixture_path, output_base):
-    """Run all checks for a single YAML fixture. Returns (pass_count, fail_count)."""
+def run_fixture(fixture_path):
+    """Run one fixture and return pass/fail totals plus a durable receipt."""
     with open(fixture_path) as f:
         fixture = yaml.safe_load(f)
 
     name = fixture.get("name", os.path.basename(fixture_path))
     rule = fixture["rule"]
     tests = fixture.get("tests", [])
+    receipt = {
+        "fixture": os.path.basename(fixture_path),
+        "fixture_sha256": sha256_file(fixture_path),
+        "name": name,
+        "rule_sha256": hashlib.sha256((rule.strip() + "\n").encode()).hexdigest(),
+        "syntax": None,
+        "tests": [],
+    }
 
     print(f"\n{'='*60}")
     print(f"Fixture: {name}")
@@ -189,28 +219,36 @@ def run_fixture(fixture_path, output_base):
         rule_path = write_rule_file(work_dir, rule)
 
         ok, stderr = syntax_check(rule_path, yaml_path)
+        receipt["syntax"] = {"passed": ok, "detail": stderr.strip()}
         if ok:
-            print(f"  [PASS] Level 1: syntax check")
+            print("  [PASS] Level 1: syntax check")
             passes += 1
         else:
-            print(f"  [FAIL] Level 1: syntax check")
+            print("  [FAIL] Level 1: syntax check")
             for line in stderr.strip().splitlines():
                 print(f"         {line}")
             fails += 1
-            # If syntax fails, skip fire tests (they'll all fail).
-            return passes, fails
+            return passes, fails, receipt
 
         # --- Level 2: fire tests ---
         if not tests:
-            print(f"  [SKIP] Level 2: no test cases defined")
-            return passes, fails
+            if fixture.get("syntax_only") is True and fixture.get("syntax_only_reason"):
+                reason = str(fixture["syntax_only_reason"])
+                print(f"  [SKIP] Level 2: explicit syntax-only fixture -- {reason}")
+                receipt["behavioral_validation"] = {"status": "syntax-only", "reason": reason}
+                return passes, fails, receipt
+            print("  [FAIL] Level 2: no test cases defined")
+            fails += 1
+            receipt["tests"].append(
+                {"name": "fixture_has_tests", "passed": False, "detail": "no behavioral tests"}
+            )
+            return passes, fails, receipt
 
         for i, tc in enumerate(tests):
             tc_name = tc.get("name", f"test_{i}")
             request_spec = tc["request"]
             expected_sids = tc.get("expected_sids", [])
 
-            # Each test case gets its own subdirectory.
             tc_dir = os.path.join(work_dir, f"tc_{i}")
             os.makedirs(tc_dir, exist_ok=True)
 
@@ -220,6 +258,15 @@ def run_fixture(fixture_path, output_base):
             ok, detail = fire_test(rule_path, yaml_path, pcap_path, tc_dir, expected_sids)
             status = "PASS" if ok else "FAIL"
             print(f"  [{status}] Level 2: {tc_name} -- {detail}")
+            receipt["tests"].append(
+                {
+                    "name": tc_name,
+                    "passed": ok,
+                    "expected_sids": expected_sids,
+                    "pcap_sha256": sha256_file(pcap_path),
+                    "detail": detail,
+                }
+            )
             if ok:
                 passes += 1
             else:
@@ -228,7 +275,7 @@ def run_fixture(fixture_path, output_base):
     finally:
         shutil.rmtree(work_dir, ignore_errors=True)
 
-    return passes, fails
+    return passes, fails, receipt
 
 
 def main():
@@ -248,14 +295,29 @@ def main():
     fixture_files.sort()
     total_pass = 0
     total_fail = 0
+    fixture_receipts = []
 
     for fp in fixture_files:
-        p, f = run_fixture(fp, output_dir)
-        total_pass += p
-        total_fail += f
+        passed, failed, receipt = run_fixture(fp)
+        total_pass += passed
+        total_fail += failed
+        fixture_receipts.append(receipt)
+
+    validation_receipt = {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "suricata": suricata_version(),
+        "total_pass": total_pass,
+        "total_fail": total_fail,
+        "fixtures": fixture_receipts,
+    }
+    receipt_path = os.path.join(output_dir, "validation-receipt.json")
+    with open(receipt_path, "w") as handle:
+        json.dump(validation_receipt, handle, indent=2)
+        handle.write("\n")
 
     print(f"\n{'='*60}")
     print(f"Total: {total_pass} passed, {total_fail} failed")
+    print(f"Receipt: {receipt_path}")
     print(f"{'='*60}")
     sys.exit(1 if total_fail > 0 else 0)
 

@@ -1,0 +1,13 @@
+name: "JA3/JA4 blog: known Java 11 SSL-VPN scanner JA4 hash"
+
+# JA4 fire testing needs a captured ClientHello whose computed JA4 hash is the
+# published value; the fixture retains explicit syntax-only status until that
+# packet is available.
+syntax_only: true
+syntax_only_reason: "No retained ClientHello computes to the published JA4 hash."
+rule: >-
+  alert tls any any -> any any (
+  msg:"known Java 11 SSL-VPN scanner";
+  ja4.hash;
+  content:"t12i280800_0df5e5c63df4_686390af6b8e";
+  sid:100001; rev:1;)

@@ -1,0 +1,40 @@
+name: "TDGate 1000876004 - C2 and delivery-domain TLS SNI"
+
+rule: >-
+  alert tls $HOME_NET any -> $EXTERNAL_NET any (msg:"MALWARE-CNC TDGate C2 and delivery domain TLS SNI";
+  flow:to_server,established;
+  tls.sni; dotprefix; content:".876553.xyz"; nocase; endswith;
+  classtype:trojan-activity; priority:2; sid:1000876004; rev:2;)
+
+tests:
+  - name: "positive-cdn-876553-xyz"
+    expected_sids: [1000876004]
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 172.64.80.1
+      port: 443
+      raw_hex: "16030100460100004203030102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2000000213010100001700000013001100000e63646e2e3837363535332e78797a"
+
+  - name: "positive-apex-876553-xyz"
+    expected_sids: [1000876004]
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 172.64.80.1
+      port: 443
+      raw_hex: "16030100420100003e03030102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f200000021301010000130000000f000d00000a3837363535332e78797a"
+
+  - name: "negative-lookalike-suffix"
+    expected_sids: []
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 172.64.80.1
+      port: 443
+      raw_hex: "16030100450100004103030102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2000000213010100001600000012001000000d6e6f743837363535332e78797a"
+
+  - name: "negative-unrelated-domain"
+    expected_sids: []
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 172.64.80.1
+      port: 443
+      raw_hex: "16030100430100003f03030102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2000000213010100001400000010000e00000b6578616d706c652e636f6d"

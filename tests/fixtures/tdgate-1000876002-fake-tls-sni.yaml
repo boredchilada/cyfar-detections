@@ -1,0 +1,40 @@
+name: "TDGate 1000876002 - direct-mode fake TLS SNI"
+
+rule: >-
+  alert tls $HOME_NET any -> any any (msg:"MALWARE-CNC TDGate direct-mode fake TLS SNI";
+  flow:to_server,established;
+  tls.sni; pcre:"/^td-(gate|tun)\.local$/i";
+  classtype:trojan-activity; priority:1; sid:1000876002; rev:2;)
+
+tests:
+  - name: "positive-td-gate-local-port-443"
+    expected_sids: [1000876002]
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 203.0.113.50
+      port: 443
+      raw_hex: "16030100450100004103030102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2000000213010100001600000012001000000d74642d676174652e6c6f63616c"
+
+  - name: "positive-td-tun-local-port-50031"
+    expected_sids: [1000876002]
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 10.0.0.25
+      port: 50031
+      raw_hex: "16030100440100004003030102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2000000213010100001500000011000f00000c74642d74756e2e6c6f63616c"
+
+  - name: "negative-benign-local-sni"
+    expected_sids: []
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 203.0.113.50
+      port: 443
+      raw_hex: "16030100450100004103030102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2000000213010100001600000012001000000d7072696e7465722e6c6f63616c"
+
+  - name: "negative-unrelated-sni"
+    expected_sids: []
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 203.0.113.50
+      port: 443
+      raw_hex: "16030100430100003f03030102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2000000213010100001400000010000e00000b6578616d706c652e636f6d"

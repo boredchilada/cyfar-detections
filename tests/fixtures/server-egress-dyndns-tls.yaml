@@ -1,0 +1,50 @@
+name: "Outbound TLS from server subnet to dynamic-DNS zones (C2 callback behavior)"
+
+# Behavioral rule: servers don't resolve or connect to dyndns hostnames.
+# A TLS handshake from a server subnet to a dyndns parent zone is a
+# strong C2 indicator regardless of the specific hostname or actor.
+#
+# The zone list covers providers disproportionately used for C2
+# infrastructure. Ordered by abuse prevalence from public reporting.
+# Scope $HOME_NET to server/container subnets only — if workstations
+# are included, this will fire on users visiting dyndns-hosted sites.
+
+rule: >-
+  alert tls $HOME_NET any -> !$HOME_NET 443 (msg:"ET POLICY Outbound TLS from server to dynamic-DNS zone";
+  flow:to_server,established;
+  tls.sni; pcre:"/\.(ddns\.net|duckdns\.org|no-ip\.(org|com|biz)|dynu\.com|hopto\.org|zapto\.org|sytes\.net|serveftp\.com|dyndns\.org|freedns\.afraid\.org|ggff\.net|dpdns\.org|chickenkiller\.com|gotdns\.ch|myftp\.biz|myvnc\.com|publicvm\.com)$/i";
+  classtype:policy-violation; sid:1000101030; rev:1;
+  metadata: created_at 2026-05-28;)
+
+tests:
+  - name: "positive-ggff-net-sni"
+    expected_sids: [1000101030]
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 203.0.113.50
+      port: 443
+      raw_hex: "160301004f0100004b0303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f0000021301010000200000001c001a0000177a68616e6767652e6f6b617070782e676766662e6e6574"
+
+  - name: "positive-dpdns-org-sni"
+    expected_sids: [1000101030]
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 203.0.113.50
+      port: 443
+      raw_hex: "160301004e0100004a0303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f00000213010100001f0000001b00190000167a7a7a2e6966636f6e6669672e6470646e732e6f7267"
+
+  - name: "negative-unrelated-sni"
+    expected_sids: []
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 203.0.113.50
+      port: 443
+      raw_hex: "16030100430100003f0303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f00000213010100001400000010000e00000b6578616d706c652e636f6d"
+
+  - name: "negative-external-source"
+    expected_sids: []
+    request:
+      client_ip: 198.51.100.10
+      server_ip: 203.0.113.50
+      port: 443
+      raw_hex: "160301004f0100004b0303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f0000021301010000200000001c001a0000177a68616e6767652e6f6b617070782e676766662e6e6574"

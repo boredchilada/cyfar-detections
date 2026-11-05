@@ -31,6 +31,19 @@ tests/
 | `yara/ivanti-sentry-cve-2026-10520.yar` | YARA | 2 (JSP + PHP webshell) |
 | `host/ivanti-sentry-cve-2026-10520.sh` | Host | 1 (UID-0 backdoor, webshell, history clearing) |
 
+### TDGate delivered through Ivanti Sentry CVE-2026-10520
+
+[Unlinked After OK: TDGate Delivery Commands Targeting Ivanti Sentry CVE-2026-10520](https://cyfar.ca/engagements/unlinked-after-ok-tdgate-delivery-commands-targeting-ivanti-sentry-cve-2026)
+
+| File | Type | Rules |
+|------|------|-------|
+| `suricata/ivanti-sentry-cve-2026-10520.rules` | Suricata | 1 shared MICS command-execution rule |
+| `suricata/tdgate-ivanti-sentry-rust-agent.rules` | Suricata | 4 (WebSocket gate/tunnel, fake local SNI, cleartext handshake, C2/delivery SNI) |
+| `yara/tdgate-ivanti-sentry-rust-agent.yar` | YARA | 3 (configured build, family behavior, build environment) |
+| `host/tdgate-ivanti-sentry-rust-agent.sh` | Host | 1 fail-loud Linux audit |
+
+The shared MICS rule is counted under the earlier Ivanti Sentry report in the repository totals.
+
 ### VoidLink DDoS-for-hire botnet + Docker Engine API abuse
 
 [Self-Blocking Docker API Abuse Delivers the VoidLink DDoS-for-Hire Botnet](https://cyfar.ca/engagements/self-blocking-docker-api-abuse-delivers-the-voidlink-ddos-for-hire-botnet)
@@ -119,7 +132,7 @@ The report's Suricata rule is SID 1000231001, listed in the VoidLink section abo
 | `yara/snowlight-vshell-access-cluster.yar` | YARA | 3 (`/slw` shell loader, SNOWLIGHT ELF loader across amd64/386/arm64/armv7, decoded VShell 4.9.3 builds sharing the 20,480-byte AES-128-CBC configuration blob) |
 | `host/snowlight-vshell-access-cluster.sh` | Host | 1 (`/memfd:a (deleted)` `[kworker/0:2]` process check, `/tmp/log_de.log` and `a19b30acws` file check, cPanel raw session and crontab checks) |
 
-**Totals:** 33 Suricata rules, 20 YARA rules, 18 host hunt commands. More rules land as new engagement reports publish.
+**Totals:** 37 Suricata rules, 23 YARA rules, 19 host hunt commands. More rules land as new engagement reports publish.
 
 ## Using the rules
 

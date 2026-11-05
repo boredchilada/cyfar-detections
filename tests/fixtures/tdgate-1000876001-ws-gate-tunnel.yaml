@@ -1,0 +1,75 @@
+name: "TDGate 1000876001 - default WebSocket gate and tunnel upgrade"
+
+rule: >-
+  alert http $HOME_NET any -> $EXTERNAL_NET any (msg:"MALWARE-CNC TDGate default WebSocket gate or tunnel upgrade";
+  flow:to_server,established;
+  http.method; content:"GET";
+  http.uri; pcre:"/^\/Q1fc8a9OCb7AsC6f\/ws(Gate|Tunnel)\?/";
+  content:"token="; distance:0;
+  content:"&id="; distance:0;
+  http.header; content:"Upgrade: websocket"; nocase;
+  classtype:trojan-activity; priority:1; sid:1000876001; rev:2;)
+
+tests:
+  - name: "positive-default-wsgate-without-enc"
+    expected_sids: [1000876001]
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 198.51.100.20
+      port: 80
+      method: GET
+      uri: "/Q1fc8a9OCb7AsC6f/wsGate?token=ChangeMe_GateToken_9f3K&id=5b5ca3cb-434f-4492-a0f7-11c0b2e0f358"
+      host: cdn.876553.xyz
+      headers:
+        Upgrade: websocket
+        Connection: Upgrade
+        Sec-WebSocket-Version: "13"
+
+  - name: "positive-default-wstunnel-with-enc1"
+    expected_sids: [1000876001]
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 198.51.100.20
+      port: 80
+      method: GET
+      uri: "/Q1fc8a9OCb7AsC6f/wsTunnel?token=ChangeMe_GateToken_9f3K&id=5b5ca3cb-434f-4492-a0f7-11c0b2e0f358&enc=1"
+      host: cdn.876553.xyz
+      headers:
+        Upgrade: websocket
+        Connection: Upgrade
+
+  - name: "negative-benign-websocket-upgrade"
+    expected_sids: []
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 198.51.100.20
+      port: 80
+      method: GET
+      uri: "/api/v1/ws?token=abc&id=def"
+      host: app.example.com
+      headers:
+        Upgrade: websocket
+        Connection: Upgrade
+
+  - name: "negative-custom-path"
+    expected_sids: []
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 198.51.100.20
+      port: 80
+      method: GET
+      uri: "/custom/wsGate?token=abc&id=def"
+      host: cdn.876553.xyz
+      headers:
+        Upgrade: websocket
+        Connection: Upgrade
+
+  - name: "negative-default-path-without-upgrade"
+    expected_sids: []
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 198.51.100.20
+      port: 80
+      method: GET
+      uri: "/Q1fc8a9OCb7AsC6f/wsGate?token=abc&id=def"
+      host: cdn.876553.xyz

@@ -1,0 +1,53 @@
+name: "TDGate 1000876003 - cleartext HELLO and TUNHELLO handshakes"
+
+rule: >-
+  alert tcp $HOME_NET any -> any any (msg:"MALWARE-CNC TDGate cleartext HELLO or TUNHELLO handshake";
+  flow:to_server,established;
+  pcre:"/^(\x00\x05HELLO\x00|\x00\x08TUNHELLO\x00)/s";
+  classtype:trojan-activity; priority:1; sid:1000876003; rev:2;)
+
+tests:
+  - name: "positive-main-channel-hello-port-445"
+    expected_sids: [1000876003]
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 203.0.113.50
+      port: 445
+      raw_hex: "000548454c4c4f00174368616e67654d655f47617465546f6b656e5f3966334b002435623563613363622d343334662d343439322d613066372d313163306232653066333538"
+
+  - name: "positive-fragmented-tunhello-port-50035"
+    expected_sids: [1000876003]
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 203.0.113.50
+      port: 50035
+      raw_hex_segments:
+        - "00085455"
+        - "4e48454c4c4f00174368616e67654d655f47617465546f6b656e5f3966334b002435623563613363622d343334662d343439322d613066372d313163306232653066333538"
+
+  - name: "positive-long-coalesced-hello-over-512-bytes"
+    expected_sids: [1000876003]
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 203.0.113.50
+      port: 445
+      raw_hex: "000548454c4c4f00"
+      append_hex_repeat:
+        byte: "41"
+        count: 600
+
+  - name: "negative-smb2-negotiate-port-445"
+    expected_sids: []
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 10.0.0.20
+      port: 445
+      raw_hex: "00000054fe534d424000000000000000"
+
+  - name: "negative-http-get"
+    expected_sids: []
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 203.0.113.50
+      port: 80
+      raw: "GET /HELLO HTTP/1.1\nHost: example.com\n\n"

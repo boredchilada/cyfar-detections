@@ -26,4 +26,51 @@ rule: >-
   classtype:trojan-activity; sid:1000101013; rev:1;
   metadata: created_at 2026-05-27;)
 
-tests: []
+tests:
+  - name: "positive-primary-dns"
+    expected_sids: [1000101010]
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 203.0.113.53
+      port: 53
+      raw_hex: "0029123401000001000000000000077a68616e676765066f6b617070780467676666036e65740000010001"
+
+  - name: "positive-backup-dns"
+    expected_sids: [1000101011]
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 203.0.113.53
+      port: 53
+      raw_hex: "0028123401000001000000000000037a7a7a086966636f6e666967056470646e73036f72670000010001"
+
+  - name: "positive-primary-tls-sni"
+    expected_sids: [1000101012]
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 203.0.113.50
+      port: 443
+      raw_hex: "160301004f0100004b0303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f0000021301010000200000001c001a0000177a68616e6767652e6f6b617070782e676766662e6e6574"
+
+  - name: "positive-backup-tls-sni"
+    expected_sids: [1000101013]
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 203.0.113.50
+      port: 443
+      raw_hex: "160301004e0100004a0303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f00000213010100001f0000001b00190000167a7a7a2e6966636f6e6669672e6470646e732e6f7267"
+
+  - name: "negative-unrelated-dns"
+    expected_sids: []
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 203.0.113.53
+      port: 53
+      raw_hex: "001d123401000001000000000000076578616d706c6503636f6d0000010001"
+
+  - name: "negative-unrelated-tls-sni"
+    expected_sids: []
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 203.0.113.50
+      port: 443
+      raw_hex: "16030100430100003f0303000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f00000213010100001400000010000e00000b6578616d706c652e636f6d"

@@ -1,0 +1,53 @@
+name: "Cloudflare R2 dropper fetch - DNS and TLS detection"
+
+# Two rules:
+# 1. IOC-specific: exact R2 bucket from this engagement
+# 2. Broader heuristic: any R2 public bucket with a long hex prefix
+#    (pub-[32+ hex chars].r2.dev), which is the standard R2 format
+#    for auto-generated bucket IDs. Legitimate R2 users typically
+#    configure custom domains or have shorter human-readable prefixes.
+
+rule: >-
+  alert dns $HOME_NET any -> any 53 (msg:"MALWARE reverse-control-agent R2 dropper bucket DNS lookup";
+  dns.query; content:"pub-f49c78b9eb854878a5ee1d8e3c61aae8.r2.dev"; nocase; endswith;
+  classtype:trojan-activity; sid:1000101020; rev:1;
+  metadata: created_at 2026-05-27;)
+
+  alert dns $HOME_NET any -> any 53 (msg:"ET INFO DNS lookup for Cloudflare R2 public bucket with long hex prefix";
+  dns.query; content:".r2.dev"; nocase; endswith;
+  dns.query; pcre:"/^pub-[a-f0-9]{20,}\x2er2\x2edev$/i";
+  classtype:not-suspicious; sid:1000101021; rev:1;
+  metadata: created_at 2026-05-27;)
+
+tests:
+  - name: "positive-engagement-bucket"
+    expected_sids: [1000101020, 1000101021]
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 203.0.113.53
+      port: 53
+      raw_hex: "003d123401000001000000000000247075622d6634396337386239656238353438373861356565316438653363363161616538027232036465760000010001"
+
+  - name: "positive-long-hex-r2-bucket"
+    expected_sids: [1000101021]
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 203.0.113.53
+      port: 53
+      raw_hex: "00351234010000010000000000001c7075622d303132333435363738396162636465663031323334353637027232036465760000010001"
+
+  - name: "negative-human-readable-r2-name"
+    expected_sids: []
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 203.0.113.53
+      port: 53
+      raw_hex: "001f12340100000100000000000006617373657473027232036465760000010001"
+
+  - name: "negative-unrelated-domain"
+    expected_sids: []
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 203.0.113.53
+      port: 53
+      raw_hex: "001d123401000001000000000000076578616d706c6503636f6d0000010001"

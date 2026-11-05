@@ -1,61 +1,119 @@
-name: "Ivanti Sentry 844001 — pre-auth MICS handleMessage POST (CVE-2026-10520, high)"
+name: "Ivanti Sentry 1000844001 - decoded MICS commandexec request"
+topology: "TLS inspection or packet-broker mirror emits plaintext HTTP with the original external client, HOME_NET server, direction, and TCP/8443 tuple."
+
 
 rule: >-
-  alert http $EXTERNAL_NET any -> $HOME_NET 8443 (msg:"IVANTI SENTRY CVE-2026-10520 MICS handleMessage POST (pre-auth RCE attempt)";
+  alert http $EXTERNAL_NET any -> $HOME_NET 8443 (msg:"IVANTI SENTRY MICS commandexec request (CVE-2026-10520)";
   flow:to_server,established;
   http.method; content:"POST";
-  http.uri; content:"/mics/"; content:"/handleMessage"; fast_pattern;
+  http.uri; content:"/mics/api/v2/sentry/mics-config/handleMessage"; fast_pattern;
+  http.request_body; url_decode; content:"/configuration/system/commandexec"; nocase;
+  content:"<commandexec"; nocase;
+  content:"<reqandres"; nocase;
   reference:cve,2026-10520; reference:url,nvd.nist.gov/vuln/detail/CVE-2026-10520;
-  classtype:attempted-admin; priority:1; sid:1000844001; rev:1;)
+  classtype:attempted-admin; priority:1; sid:1000844001; rev:3;)
 
 tests:
-  - name: "positive-handlemessage-external-post"
+  - name: "positive-tuple-preserving-decrypted-mirror-standard-form"
     expected_sids: [1000844001]
+    request:
+      client_ip: 203.0.113.5
+      server_ip: 10.0.5.100
+      method: POST
+      uri: /mics/api/v2/sentry/mics-config/handleMessage
+      host: 10.0.5.100:8443
+      port: 8443
+      headers:
+        Content-Type: application/x-www-form-urlencoded
+        Accept-Encoding: identity
+      body: >-
+        message=execute+system+%2Fconfiguration%2Fsystem%2Fcommandexec+%3Ccommandexec%3E%3Cindex%3E1%3C%2Findex%3E%3Creqandres%3Eid%3C%2Freqandres%3E%3C%2Fcommandexec%3E
+
+  - name: "positive-mixed-encoded-form-value"
+    expected_sids: [1000844001]
+    request:
+      client_ip: 203.0.113.5
+      server_ip: 10.0.5.100
+      method: POST
+      uri: /mics/api/v2/sentry/mics-config/handleMessage
+      host: 10.0.5.100:8443
+      port: 8443
+      headers:
+        Content-Type: application/x-www-form-urlencoded
+      body: >-
+        other=1&message=execute+system+%2Fconfiguration%2Fsystem%2Fcommandexec+<commandexec><index>1</index><reqandres>id</reqandres></commandexec>
+
+  - name: "positive-literal-form-value"
+    expected_sids: [1000844001]
+    request:
+      client_ip: 123.115.146.22
+      server_ip: 10.0.5.100
+      method: POST
+      uri: /mics/api/v2/sentry/mics-config/handleMessage
+      host: 10.0.5.100:8443
+      port: 8443
+      headers:
+        Content-Type: application/x-www-form-urlencoded
+        Accept-Encoding: identity
+      body: >-
+        message=execute system /configuration/system/commandexec <commandexec><index>1</index><reqandres>echo snty122e23d1</reqandres></commandexec>
+
+  - name: "negative-encoded-benign-request"
+    expected_sids: []
     request:
       client_ip: 203.0.113.5
       method: POST
       uri: /mics/api/v2/sentry/mics-config/handleMessage
-      host: 198.51.100.10
+      host: 10.0.5.100:8443
       port: 8443
       headers:
-        Content-Type: application/xml
-        User-Agent: python-requests/2.31.0
-      body: >-
-        <message><command>id</command></message>
+        Content-Type: application/x-www-form-urlencoded
+      body: "message=get+system+%2Fconfiguration%2Fsystem%2Fstatus"
 
-  - name: "negative-get-not-post"
-    expected_sids: []
-    request:
-      client_ip: 203.0.113.5
-      method: GET
-      uri: /mics/api/v2/sentry/mics-config/handleMessage
-      host: 198.51.100.10
-      port: 8443
-      headers:
-        User-Agent: python-requests/2.31.0
-
-  - name: "negative-different-mics-path"
+  - name: "negative-wrong-endpoint"
     expected_sids: []
     request:
       client_ip: 203.0.113.5
       method: POST
       uri: /mics/login.jsp
-      host: 198.51.100.10
+      host: 10.0.5.100:8443
       port: 8443
       headers:
         Content-Type: application/x-www-form-urlencoded
       body: >-
-        username=admin&password=admin
+        message=execute+system+%2Fconfiguration%2Fsystem%2Fcommandexec+%3Ccommandexec%3E%3Creqandres%3Eid%3C%2Freqandres%3E%3C%2Fcommandexec%3E
 
   - name: "negative-internal-source"
     expected_sids: []
     request:
-      client_ip: 10.200.1.50
+      client_ip: 10.0.5.37
       method: POST
       uri: /mics/api/v2/sentry/mics-config/handleMessage
-      host: 198.51.100.10
+      host: 10.0.5.100:8443
       port: 8443
       headers:
-        Content-Type: application/xml
+        Content-Type: application/x-www-form-urlencoded
       body: >-
-        <message><command>id</command></message>
+        message=execute+system+%2Fconfiguration%2Fsystem%2Fcommandexec+%3Ccommandexec%3E%3Creqandres%3Eid%3C%2Freqandres%3E%3C%2Fcommandexec%3E
+
+  - name: "negative-reverse-proxy-rewritten-port"
+    expected_sids: []
+    request:
+      client_ip: 203.0.113.5
+      server_ip: 10.0.5.100
+      method: POST
+      uri: /mics/api/v2/sentry/mics-config/handleMessage
+      host: 10.0.5.100:8080
+      port: 8080
+      headers:
+        Content-Type: application/x-www-form-urlencoded
+      body: >-
+        message=execute+system+%2Fconfiguration%2Fsystem%2Fcommandexec+%3Ccommandexec%3E%3Creqandres%3Eid%3C%2Freqandres%3E%3C%2Fcommandexec%3E
+
+  - name: "negative-encrypted-tls-only-on-8443"
+    expected_sids: []
+    request:
+      client_ip: 203.0.113.5
+      server_ip: 10.0.5.100
+      port: 8443
+      raw_hex: "16030100430100003f03030102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2000000213010100001400000010000e00000b6578616d706c652e636f6d"

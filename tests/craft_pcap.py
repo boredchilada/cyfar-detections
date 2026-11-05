@@ -63,8 +63,9 @@ def craft_pcap(request_spec, output_path, client_port=49152):
 
     HTTP remains the default. A fixture with ``raw``, ``raw_segments``,
     ``raw_hex`` or ``raw_hex_segments`` uses those bytes as to-server payloads
-    and may add a server banner and response. Hex fields carry binary protocols
-    (DNS over TCP, TLS records) that text fields cannot express.
+    and may add ``append_hex_repeat`` plus a server banner/response. Hex fields
+    carry binary protocols (DNS over TCP, TLS records) that text fields cannot
+    express.
     """
     raw_mode = any(
         key in request_spec for key in ("raw", "raw_segments", "raw_hex", "raw_hex_segments")
@@ -84,6 +85,12 @@ def craft_pcap(request_spec, output_path, client_port=49152):
             client_payloads = [_wire_bytes(value) for value in request_spec["raw_segments"]]
         else:
             client_payloads = [_wire_bytes(request_spec["raw"])]
+        repeat = request_spec.get("append_hex_repeat")
+        if repeat:
+            byte = _hex_bytes(repeat["byte"])
+            if len(byte) != 1 or int(repeat["count"]) < 0:
+                raise ValueError("append_hex_repeat requires one byte and a non-negative count")
+            client_payloads[-1] += byte * int(repeat["count"])
         server_banner = _wire_bytes(request_spec.get("server_banner", ""))
         server_response = _wire_bytes(request_spec.get("server_response", ""))
     else:

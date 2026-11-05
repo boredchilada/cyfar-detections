@@ -9,4 +9,4 @@ services:
     entrypoint: ["python3", "benign_check.py"]
     volumes:
       - ./benign-corpus:/validator/benign-corpus:ro
-      - ./suricata:/validator/suricata:ro
+      - ../suricata:/validator/suricata:ro
