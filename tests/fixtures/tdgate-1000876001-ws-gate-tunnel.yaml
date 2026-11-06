@@ -4,11 +4,12 @@ rule: >-
   alert http $HOME_NET any -> $EXTERNAL_NET any (msg:"MALWARE-CNC TDGate default WebSocket gate or tunnel upgrade";
   flow:to_server,established;
   http.method; content:"GET";
-  http.uri; pcre:"/^\/Q1fc8a9OCb7AsC6f\/ws(Gate|Tunnel)\?/";
+  http.uri; content:"/Q1fc8a9OCb7AsC6f/ws"; startswith; fast_pattern;
+  pcre:"/^\/Q1fc8a9OCb7AsC6f\/ws(Gate|Tunnel)\?/";
   content:"token="; distance:0;
   content:"&id="; distance:0;
   http.header; content:"Upgrade: websocket"; nocase;
-  classtype:trojan-activity; priority:1; sid:1000876001; rev:2;)
+  classtype:trojan-activity; priority:1; sid:1000876001; rev:3;)
 
 tests:
   - name: "positive-default-wsgate-without-enc"

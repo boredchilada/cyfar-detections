@@ -3,8 +3,9 @@ name: "TDGate 1000876003 - cleartext HELLO and TUNHELLO handshakes"
 rule: >-
   alert tcp $HOME_NET any -> any any (msg:"MALWARE-CNC TDGate cleartext HELLO or TUNHELLO handshake";
   flow:to_server,established;
+  content:"HELLO|00|"; depth:11; fast_pattern;
   pcre:"/^(\x00\x05HELLO\x00|\x00\x08TUNHELLO\x00)/s";
-  classtype:trojan-activity; priority:1; sid:1000876003; rev:2;)
+  classtype:trojan-activity; priority:1; sid:1000876003; rev:3;)
 
 tests:
   - name: "positive-main-channel-hello-port-445"

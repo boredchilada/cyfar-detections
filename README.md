@@ -40,7 +40,7 @@ tests/
 | `suricata/ivanti-sentry-cve-2026-10520.rules` | Suricata | 1 shared MICS command-execution rule |
 | `suricata/tdgate-ivanti-sentry-rust-agent.rules` | Suricata | 4 (WebSocket gate/tunnel, fake local SNI, cleartext handshake, C2/delivery SNI) |
 | `yara/tdgate-ivanti-sentry-rust-agent.yar` | YARA | 3 (configured build, family behavior, build environment) |
-| `host/tdgate-ivanti-sentry-rust-agent.sh` | Host | 1 fail-loud Linux audit |
+| `host/tdgate-ivanti-sentry-rust-agent.sh` | Host | 1 fail-loud Linux triage script |
 
 The shared MICS rule is counted under the earlier Ivanti Sentry report in the repository totals.
 

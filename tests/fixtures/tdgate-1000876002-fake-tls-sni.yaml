@@ -3,8 +3,9 @@ name: "TDGate 1000876002 - direct-mode fake TLS SNI"
 rule: >-
   alert tls $HOME_NET any -> any any (msg:"MALWARE-CNC TDGate direct-mode fake TLS SNI";
   flow:to_server,established;
-  tls.sni; pcre:"/^td-(gate|tun)\.local$/i";
-  classtype:trojan-activity; priority:1; sid:1000876002; rev:2;)
+  tls.sni; content:"td-"; startswith; nocase; content:".local"; distance:0; nocase; endswith; fast_pattern;
+  pcre:"/^td-(gate|tun)\.local$/i";
+  classtype:trojan-activity; priority:1; sid:1000876002; rev:3;)
 
 tests:
   - name: "positive-td-gate-local-port-443"
