@@ -7,6 +7,8 @@ for marker in /.dockerenv /run/.containerenv; do
 done
 grep -Eiq '(docker|containerd|kubepods|libpod|lxc)' /proc/1/cgroup 2>/dev/null &&
   { echo "ERROR: host PID namespace required (container cgroup)" >&2; exit 2; }
+[ "$(cat /proc/2/comm 2>/dev/null)" = kthreadd ] ||
+  { echo "ERROR: host PID namespace required (PID 2 is not kthreadd)" >&2; exit 2; }
 
 found=0
 incomplete=0
@@ -25,12 +27,12 @@ for d in /proc/[0-9]*; do
   proc_seen=$((proc_seen + 1))
   pid=${d#/proc/}
   comm=$(cat "$d/comm" 2>/dev/null) || { [ -d "$d" ] && read_errors=$((read_errors + 1)); continue; }
-  argv0=$(tr '\0' '\n' < "$d/cmdline" 2>/dev/null | head -n1) || { [ -d "$d" ] && read_errors=$((read_errors + 1)); continue; }
+  argv0=$(tr '\0' '\n' 2>/dev/null < "$d/cmdline" | head -n1) || { [ -d "$d" ] && read_errors=$((read_errors + 1)); continue; }
   ppid=$(awk '/^PPid:/{print $2}' "$d/status" 2>/dev/null || true)
   case "$exe" in *" (deleted)") say "DELETED-EXE pid=$pid ppid=$ppid comm=$comm exe=$exe" ;; esac
   case "$comm:$argv0" in *kworker/*|"["*) say "USERSPACE-KWORKER pid=$pid ppid=$ppid comm=$comm argv0=$argv0 exe=$exe" ;; esac
 
-  if env_lines=$(tr '\0' '\n' < "$d/environ" 2>/dev/null); then
+  if env_lines=$(tr '\0' '\n' 2>/dev/null < "$d/environ"); then
     env_seen=$((env_seen + 1))
     td=$(printf '%s\n' "$env_lines" | grep -E '^TD_[A-Z]+=' | tr '\n' ' ' || true)
     [ -n "$td" ] && say "TDGATE-ENV pid=$pid ppid=$ppid exe=$exe $td"
