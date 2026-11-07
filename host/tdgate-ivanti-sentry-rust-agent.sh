@@ -30,7 +30,7 @@ for d in /proc/[0-9]*; do
   argv0=$(tr '\0' '\n' 2>/dev/null < "$d/cmdline" | head -n1) || { [ -d "$d" ] && read_errors=$((read_errors + 1)); continue; }
   ppid=$(awk '/^PPid:/{print $2}' "$d/status" 2>/dev/null || true)
   case "$exe" in *" (deleted)") say "DELETED-EXE pid=$pid ppid=$ppid comm=$comm exe=$exe" ;; esac
-  case "$comm:$argv0" in *kworker/*|"["*) say "USERSPACE-KWORKER pid=$pid ppid=$ppid comm=$comm argv0=$argv0 exe=$exe" ;; esac
+  case "$comm:$argv0" in *kworker/*|*:"["*) say "USERSPACE-KWORKER pid=$pid ppid=$ppid comm=$comm argv0=$argv0 exe=$exe" ;; esac
 
   if env_lines=$(tr '\0' '\n' 2>/dev/null < "$d/environ"); then
     env_seen=$((env_seen + 1))
