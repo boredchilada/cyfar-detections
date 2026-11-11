@@ -1,0 +1,40 @@
+title: TDGate Miner Launch, Installer and Masquerade Commands
+id: 5286bce1-ea20-4cf9-908b-e42d46ebc2d7
+status: experimental
+description: Detects the miner launch and installer commands recorded in the October 14th VirusTotal Zenbox run of a TDGate loader.
+author: Cyfar
+date: 2026-11-02
+modified: 2026-11-11
+logsource:
+  product: linux
+  category: process_creation
+detection:
+  selection_masquerade:
+    CommandLine|contains|all:
+      - 'prctl(15,b"[kworker/'
+      - 'systemd-resolved-helper'
+      - '.nm.conf'
+  selection_miner_image:
+    Image|endswith: '/systemd-resolved-helper'
+  selection_miner_argv:
+    CommandLine|startswith: '[kworker/'
+  selection_cron:
+    CommandLine|contains|all:
+      - '/tmp/.nm.cron'
+      - '/etc/cron.d/0hourly-sysstat'
+  selection_exact_survey:
+    CommandLine|contains: 'falcon|crowdstrike|sentinel|mdatp|osquery|wazuh|auditd|sophos|clamd|tripwire'
+  condition: 1 of selection_*
+falsepositives:
+  - Threat-research or purple-team replay of the published Zenbox command sequence
+  - Software that deliberately sets a bracketed kernel-thread name as argv[0]
+level: medium
+tags:
+  - attack.discovery
+  - attack.t1518.001
+  - attack.persistence
+  - attack.t1053.003
+  - attack.stealth
+  - attack.t1036.005
+  - attack.impact
+  - attack.t1496.001

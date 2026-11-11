@@ -9,6 +9,9 @@ grep -Eiq '(docker|containerd|kubepods|libpod|lxc)' /proc/1/cgroup 2>/dev/null &
   { echo "ERROR: host PID namespace required (container cgroup)" >&2; exit 2; }
 [ "$(cat /proc/2/comm 2>/dev/null)" = kthreadd ] ||
   { echo "ERROR: host PID namespace required (PID 2 is not kthreadd)" >&2; exit 2; }
+self_mnt=$(readlink /proc/self/ns/mnt 2>/dev/null)
+[ -n "$self_mnt" ] && [ "$self_mnt" = "$(readlink /proc/1/ns/mnt 2>/dev/null)" ] ||
+  { echo "ERROR: host mount namespace required (differs from PID 1)" >&2; exit 2; }
 
 found=0
 incomplete=0
@@ -19,6 +22,13 @@ tmpdirs=$(printf '/tmp\n/var/tmp\n/dev/shm')
 
 say() { printf '%s\n' "$*"; found=1; }
 warn() { printf 'COVERAGE ERROR: %s\n' "$*" >&2; incomplete=1; }
+# Report matches and errors separately so a scan error never hides a match.
+report() {
+  hits=$(printf '%s\n' "$2" | grep -Ev '^(find|ls): ' || true)
+  errs=$(printf '%s\n' "$2" | grep -E '^(find|ls): ' || true)
+  [ -z "$hits" ] || say "$hits"
+  [ "$3" -eq 0 ] || warn "$1: ${errs:-exit $3}"
+}
 
 # Inspect userspace processes for deleted executables, masquerade names, and TD_* state.
 for d in /proc/[0-9]*; do
@@ -52,9 +62,7 @@ sorted_tmpdirs=$(printf '%s\n' "$tmpdirs" | sort -u)
 while IFS= read -r d; do
   [ -d "$d" ] || continue
   out=$(find "$d" -xdev -maxdepth 2 \( -name '.ia' -o -name '.cache_*' -o -name '.dsync_rs*' -o -name '.td-www' -o -name 'ag_dbg.log' \) -exec ls -ld {} + 2>&1)
-  rc=$?
-  [ "$rc" -eq 0 ] || warn "find failed under $d: $out"
-  [ "$rc" -ne 0 ] || [ -z "$out" ] || say "$out"
+  report "find failed under $d" "$out" "$?"
 done <<EOF
 $sorted_tmpdirs
 EOF
@@ -62,9 +70,7 @@ EOF
 for d in /var/lib /etc/cron.d; do
   [ -d "$d" ] || continue
   out=$(find "$d" -maxdepth 2 \( -name '.systemd-private-*' -o -name '0hourly-sysstat' -o -name '.nm-inst.sh' -o -name '.nm.conf' -o -name 'systemd-resolved-helper' \) -exec ls -ld {} + 2>&1)
-  rc=$?
-  [ "$rc" -eq 0 ] || warn "persistence scan failed under $d: $out"
-  [ "$rc" -ne 0 ] || [ -z "$out" ] || say "$out"
+  report "persistence scan failed under $d" "$out" "$?"
 done
 
 # Inventory wildcard listeners for comparison with deleted-executable PIDs.

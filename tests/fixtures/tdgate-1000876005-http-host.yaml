@@ -1,0 +1,131 @@
+name: "TDGate 1000876005 - delivery-domain plain-HTTP request"
+
+rule: >-
+  alert http $HOME_NET any -> $EXTERNAL_NET any (msg:"MALWARE-CNC TDGate delivery domain plain-HTTP request";
+  flow:to_server,established;
+  http.host.raw; content:"876553.xyz"; nocase; fast_pattern;
+  pcre:"/(?:^|\.)876553\.xyz\.?(?::[0-9]+)?$/i";
+  classtype:trojan-activity; priority:2; sid:1000876005; rev:1;)
+
+tests:
+  - name: "positive-miner-fetch"
+    expected_sids: [1000876005]
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 198.51.100.20
+      port: 80
+      method: GET
+      uri: "/Q1fc8a9OCb7AsC6f/dl/c291b941-d316-415c-9dff-66e4896c0bd4"
+      host: cdn.876553.xyz
+      headers:
+        User-Agent: "curl/7.81.0"
+
+  - name: "positive-host-only-listen-fetch"
+    expected_sids: [1000876005]
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 198.51.100.20
+      port: 80
+      method: GET
+      uri: "/Q1fc8a9OCb7AsC6f/dl/07f3bc3b-859c-46fd-8dcf-86c95205fd2c"
+      host: cdn.876553.xyz
+
+  - name: "positive-apex-domain"
+    expected_sids: [1000876005]
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 198.51.100.20
+      port: 80
+      method: GET
+      uri: "/"
+      host: 876553.xyz
+
+  - name: "positive-uppercase-host"
+    expected_sids: [1000876005]
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 198.51.100.20
+      port: 80
+      method: GET
+      uri: "/"
+      host: CDN.876553.XYZ
+
+  - name: "positive-host-header-with-port"
+    expected_sids: [1000876005]
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 198.51.100.20
+      port: 80
+      method: GET
+      uri: "/"
+      host: "cdn.876553.xyz:8080"
+
+  - name: "positive-nonstandard-server-port"
+    expected_sids: [1000876005]
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 198.51.100.20
+      port: 8080
+      method: GET
+      uri: "/"
+      host: cdn.876553.xyz
+
+  - name: "positive-uppercase-host-with-port"
+    expected_sids: [1000876005]
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 198.51.100.20
+      port: 8080
+      method: GET
+      uri: "/"
+      host: "CDN.876553.XYZ:8080"
+
+  - name: "positive-trailing-dot-host"
+    expected_sids: [1000876005]
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 198.51.100.20
+      port: 80
+      method: GET
+      uri: "/"
+      host: "cdn.876553.xyz."
+
+  - name: "negative-lookalike-prefix"
+    expected_sids: []
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 198.51.100.20
+      port: 80
+      method: GET
+      uri: "/Q1fc8a9OCb7AsC6f/dl/c291b941-d316-415c-9dff-66e4896c0bd4"
+      host: not876553.xyz
+
+  - name: "negative-domain-as-subdomain-of-another"
+    expected_sids: []
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 198.51.100.20
+      port: 80
+      method: GET
+      uri: "/"
+      host: 876553.xyz.example.com
+
+  - name: "negative-unrelated-host"
+    expected_sids: []
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 198.51.100.20
+      port: 80
+      method: GET
+      uri: "/Q1fc8a9OCb7AsC6f/dl/c291b941-d316-415c-9dff-66e4896c0bd4"
+      host: downloads.example.com
+
+  - name: "negative-domain-in-path-only"
+    expected_sids: []
+    request:
+      client_ip: 10.0.0.10
+      server_ip: 198.51.100.20
+      port: 80
+      method: GET
+      uri: "/redirect?to=cdn.876553.xyz"
+      host: downloads.example.com
